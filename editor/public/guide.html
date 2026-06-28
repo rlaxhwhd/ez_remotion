@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Remotion 웹 에디터 사용 설명서</title>
+<style>
+  :root {
+    --bg: #0e0f13;
+    --panel: #16181f;
+    --panel2: #1c1f29;
+    --border: #2a2e3a;
+    --text: #e7e9ee;
+    --muted: #9aa0ad;
+    --accent: #5b8cff;
+    --accent2: #ffd400;
+    --green: #1f9e6b;
+    --red: #ff5b6e;
+    --purple: #7c54d6;
+    --orange: #c2701c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── 헤더 ── */
+  .hero {
+    background: linear-gradient(135deg, #1a1d2e 0%, #0e1520 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 48px 40px 40px;
+    text-align: center;
+  }
+  .hero h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; }
+  .hero h1 span { color: var(--accent); }
+  .hero p { color: var(--muted); margin-top: 10px; font-size: 15px; }
+  .hero .open-btn {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 26px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background .15s;
+  }
+  .hero .open-btn:hover { background: #6f9bff; }
+
+  /* ── 레이아웃 ── */
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px 80px; }
+  .toc {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 36px 0 28px;
+  }
+  .toc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 12px; }
+  .toc ol { padding-left: 18px; }
+  .toc li { margin: 4px 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  section { margin-top: 40px; scroll-margin-top: 20px; }
+  section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 18px;
+  }
+  section h2 .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  p { margin-bottom: 10px; color: var(--text); }
+
+  /* ── 카드 ── */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+  }
+  .card h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .card p, .card li { color: var(--muted); font-size: 13px; }
+  .card ul, .card ol { padding-left: 18px; margin-top: 4px; }
+  .card li { margin: 3px 0; }
+
+  /* ── 단계 박스 ── */
+  .steps { counter-reset: step; display: flex; flex-direction: column; gap: 10px; }
+  .step {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .step::before {
+    counter-increment: step;
+    content: counter(step);
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 26px; height: 26px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .step-body { flex: 1; }
+  .step-body strong { display: block; font-size: 13px; margin-bottom: 3px; }
+  .step-body span { color: var(--muted); font-size: 12px; }
+
+  /* ── 레이아웃 다이어그램 ── */
+  .layout-diagram {
+    display: grid;
+    grid-template-columns: 160px 1fr 200px;
+    grid-template-rows: 36px 1fr 56px 100px;
+    gap: 4px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 11px;
+    height: 320px;
+    margin-bottom: 18px;
+  }
+  .d-header {
+    grid-column: 1 / 4;
+    background: #1e2330;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--accent);
+  }
+  .d-panel {
+    background: #1c1f29;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .d-panel .label {
+    font-weight: 700;
+    color: var(--accent2);
+    font-size: 11px;
+    margin-bottom: 2px;
+  }
+  .d-center {
+    background: #12141c;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .d-transport {
+    background: #1e2330;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 8px;
+    font-size: 11px;
+  }
+  .d-transport .btn {
+    background: var(--accent);
+    color: #fff;
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-size: 10px;
+  }
+  .d-timeline {
+    grid-column: 1 / 4;
+    background: #1c1f29;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 16px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .d-timeline .clip-blue { display:inline-block; width:70px; height:28px; background:#2d6cdf; border-radius:5px; vertical-align:middle; margin-right:4px; }
+  .d-timeline .clip-purple { display:inline-block; width:50px; height:28px; background:#7c54d6; border-radius:5px; vertical-align:middle; }
+
+  /* ── 키보드 단축키 ── */
+  .shortcut-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .shortcut {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  kbd {
+    background: #0d0f15;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--accent2);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .shortcut span { color: var(--muted); font-size: 12px; }
+
+  /* ── 태그 ── */
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .tag-new { background: var(--green); color: #fff; }
+  .tag-tip { background: var(--accent2); color: #000; }
+
+  /* ── 영역 워크플로 ── */
+  .workflow {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .wf-step {
+    flex: 1;
+    padding: 14px 16px;
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .wf-step + .wf-step { border-left: 1px solid var(--border); }
+  .wf-step .wf-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 2px;
+  }
+  .wf-step .wf-title { font-size: 13px; font-weight: 700; }
+  .wf-step .wf-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .wf-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 18px;
+  }
+
+  /* ── 효과 그리드 ── */
+  .effect-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .effect-chip {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  .effect-chip .name { font-weight: 700; margin-bottom: 2px; }
+  .effect-chip .desc { color: var(--muted); font-size: 11px; }
+
+  /* ── 주의사항 ── */
+  .notice {
+    background: #1a1f0e;
+    border: 1px solid #3a4a20;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: #b8d08a;
+    margin-top: 14px;
+  }
+  .notice strong { color: #d4e87a; }
+
+  .warn {
+    background: #1f1609;
+    border: 1px solid #5c3a0a;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: #e8b56a;
+    margin-top: 10px;
+  }
+  .warn strong { color: var(--accent2); }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 36px 0; }
+
+  @media (max-width: 600px) {
+    .layout-diagram { display: none; }
+    .shortcut-grid { grid-template-columns: 1fr; }
+    .effect-grid { grid-template-columns: 1fr 1fr; }
+    .workflow { flex-direction: column; }
+    .wf-step + .wf-step { border-left: none; border-top: 1px solid var(--border); }
+    .wf-arrow { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>🎬 <span>Remotion</span> 웹 에디터 사용 설명서</h1>
+  <p>영상 업로드부터 컷편집 · 줌인/줌아웃 · 영역 선택 효과까지 모든 기능 안내</p>
+  <a class="open-btn" href="http://localhost:5273" target="_blank">에디터 열기 →</a>
+</div>
+
+<div class="wrap">
+
+  <!-- 목차 -->
+  <div class="toc">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#layout">화면 구성</a></li>
+      <li><a href="#upload">영상/이미지/오디오 업로드</a></li>
+      <li><a href="#cut">컷편집 — 이동 · 트림 · 분할 · 삭제</a></li>
+      <li><a href="#zoom">줌인 / 줌아웃 (Ken Burns)</a></li>
+      <li><a href="#region">영역 선택 도구 — 줌인 연출 등</a></li>
+      <li><a href="#animation">애니메이션 추가</a></li>
+      <li><a href="#effects">Remotion 필터 효과</a></li>
+      <li><a href="#transition">등장 트랜지션</a></li>
+      <li><a href="#shortcuts">키보드 단축키</a></li>
+    </ol>
+  </div>
+
+  <!-- 1. 화면 구성 -->
+  <section id="layout">
+    <h2><span class="num">1</span> 화면 구성</h2>
+
+    <div class="layout-diagram">
+      <div class="d-header">🎬 Remotion 웹 에디터 &nbsp;|&nbsp; <span style="color:var(--muted);font-weight:400">상단 헤더 (해상도 · FPS 표시)</span></div>
+
+      <div class="d-panel" style="grid-row:2">
+        <div class="label">왼쪽 패널</div>
+        <div style="color:var(--muted);font-size:10px">⬆ 파일 업로드</div>
+        <div style="color:var(--muted);font-size:10px">＋ 텍스트 / 도형</div>
+        <div style="color:var(--muted);font-size:10px">캔버스 설정</div>
+        <div style="color:var(--muted);font-size:10px">클립 목록</div>
+      </div>
+
+      <div class="d-center" style="grid-row:2">
+        🖥 미리보기 (Player)
+        <br/>
+        <span style="font-size:10px;color:#555">영역 선택 드래그 가능</span>
+      </div>
+
+      <div class="d-panel" style="grid-row:2">
+        <div class="label">오른쪽 패널</div>
+        <div style="color:var(--muted);font-size:10px">클립 속성 편집</div>
+        <div style="color:var(--muted);font-size:10px">변형 (X·Y·배율·회전)</div>
+        <div style="color:var(--muted);font-size:10px">애니메이션 추가</div>
+        <div style="color:var(--muted);font-size:10px">영역 선택 도구</div>
+        <div style="color:var(--muted);font-size:10px">필터 효과</div>
+      </div>
+
+      <div class="d-transport" style="grid-column:1/4">
+        <div class="btn">⏮</div>
+        <div class="btn">▶ 재생</div>
+        <div class="btn">⏭</div>
+        <div class="btn">✂ 분할</div>
+        <div class="btn" style="background:var(--red)">🗑 삭제</div>
+        <span style="margin-left:auto;color:var(--muted)">00:00.00 / 00:05.00</span>
+      </div>
+
+      <div class="d-timeline">
+        <span style="color:var(--accent2);font-weight:700">타임라인</span>
+        <div>
+          <span class="clip-blue"></span>
+          <span class="clip-purple"></span>
+        </div>
+        <span style="margin-left:auto">← → 드래그로 이동 · 양 끝 핸들로 트림</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>영역별 역할 요약</h3>
+      <ul>
+        <li><strong>왼쪽 패널</strong> — 파일 업로드, 텍스트/도형 추가, 캔버스 해상도 설정, 업로드된 클립 목록</li>
+        <li><strong>중앙 미리보기</strong> — Remotion Player 실시간 렌더링. 영역 선택 도구 활성 시 드래그로 사각형 영역 지정 가능</li>
+        <li><strong>오른쪽 패널</strong> — 선택된 클립의 속성·변형·애니메이션·효과·영역도구 조작</li>
+        <li><strong>하단 타임라인</strong> — 클립 이동/트림/분할. 줌 슬라이더로 타임라인 배율 조정</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 2. 업로드 -->
+  <section id="upload">
+    <h2><span class="num">2</span> 영상 / 이미지 / 오디오 업로드</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-body">
+          <strong>왼쪽 패널 → "⬆ 파일 업로드" 버튼 클릭</strong>
+          <span>mp4, webm, mov, avi, mkv / png, jpg, gif, webp / mp3, wav, aac, m4a 등 지원</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <strong>파일 선택 (여러 파일 한 번에 가능)</strong>
+          <span>영상: 플레이헤드 위치에 클립으로 추가됨 · 첫 영상의 해상도가 캔버스 크기로 자동 적용됨</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <strong>타임라인과 클립 목록에 즉시 반영</strong>
+          <span>왼쪽 하단 "클립 목록"에서 클릭하면 선택 · 오른쪽 패널에서 속성 편집 가능</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3>텍스트 / 도형 추가</h3>
+      <ul>
+        <li><strong>＋ 텍스트</strong> — "여기에 텍스트" 클립이 플레이헤드 위치에 추가. 오른쪽 패널에서 내용·크기·색상·정렬 편집</li>
+        <li><strong>＋ 도형</strong> — 사각형 도형 추가. 모양(원·삼각형·별 등)·색상·크기 변경 가능</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 3. 컷편집 -->
+  <section id="cut">
+    <h2><span class="num">3</span> 컷편집 — 이동 · 트림 · 분할 · 삭제</h2>
+
+    <div class="card">
+      <h3>클립 이동</h3>
+      <p>타임라인에서 클립을 드래그하면 타임라인 상의 시작 위치가 바뀝니다.</p>
+    </div>
+
+    <div class="card">
+      <h3>트림 (앞/뒤 자르기)</h3>
+      <p>클립의 <strong>왼쪽 끝 핸들</strong>을 드래그 → 앞부분 잘라내기 (in-point 이동)<br/>
+         클립의 <strong>오른쪽 끝 핸들</strong>을 드래그 → 뒷부분 잘라내기<br/>
+         영상 클립은 소스 in-point가 자동 보정되어 끊김 없이 재생됩니다.</p>
+    </div>
+
+    <div class="card">
+      <h3>✂ 분할 (Split)</h3>
+      <ul>
+        <li>자르고 싶은 클립을 클릭하여 선택</li>
+        <li>재생 헤드(노란 세로선)를 원하는 위치로 이동</li>
+        <li>상단 <strong>"✂ 분할"</strong> 버튼 또는 키보드 <kbd>S</kbd> 누르기</li>
+        <li>클립이 두 개로 나뉩니다. 영상은 in-point가 자동 계산됩니다.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>🗑 삭제</h3>
+      <ul>
+        <li>클립 선택 후 상단 <strong>"🗑 삭제"</strong> 버튼 또는 키보드 <kbd>Delete</kbd> / <kbd>Backspace</kbd></li>
+        <li>오른쪽 패널 → <strong>"삭제"</strong> 버튼도 동일 기능</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 4. 줌인/줌아웃 -->
+  <section id="zoom">
+    <h2><span class="num">4</span> 줌인 / 줌아웃 (Ken Burns 효과)</h2>
+
+    <p>클립 전체에 걸쳐 <strong>서서히 확대/축소되는 카메라 움직임</strong>을 추가합니다. 영상·이미지·텍스트 모두 적용 가능합니다.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-body">
+          <strong>타임라인에서 클립 클릭하여 선택</strong>
+          <span>오른쪽 패널이 해당 클립의 편집 모드로 전환됩니다</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <strong>오른쪽 패널 → "애니메이션" 섹션 → 드롭다운에서 "줌 인" 또는 "줌 아웃" 선택 → "추가"</strong>
+          <span>줌 인: 시작 배율(1.0) → 끝 배율(1.4~4.0) 동안 서서히 확대</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <strong>파라미터 슬라이더로 시작·끝 배율 조정</strong>
+          <span>"시작 배율 · 1.00" "끝 배율 · 1.40" 슬라이더를 드래그하면 미리보기가 실시간 반영됩니다</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="notice">
+      <strong>💡 빠른 방법 (영역 선택 → 줌인 자동 적용)</strong><br/>
+      영역 선택 도구로 드래그 후 "영역으로 줌" 버튼을 누르면 영역 크기에 맞는 Ken Burns 줌인 애니메이션이 자동으로 추가됩니다. 아래 5번 설명 참조.
+    </div>
+  </section>
+
+  <!-- 5. 영역 선택 -->
+  <section id="region">
+    <h2><span class="num">5</span> 영역 선택 도구 — 줌인 연출 등 <span class="tag tag-new">핵심 기능</span></h2>
+
+    <p>미리보기에서 원하는 <strong>사각형 영역을 드래그</strong>해 지정한 뒤, 다양한 연출 효과를 버튼·셀렉트박스·텍스트 명령으로 적용할 수 있습니다.</p>
+
+    <div class="workflow">
+      <div class="wf-step">
+        <div class="wf-num">STEP 1</div>
+        <div class="wf-title">클립 선택</div>
+        <div class="wf-desc">타임라인에서 효과를 넣을 클립 클릭</div>
+      </div>
+      <div class="wf-arrow">›</div>
+      <div class="wf-step">
+        <div class="wf-num">STEP 2</div>
+        <div class="wf-title">영역 선택 시작</div>
+        <div class="wf-desc">오른쪽 패널 → "▢ 영역 선택 시작" 버튼 클릭 (노란 테두리 모드)</div>
+      </div>
+      <div class="wf-arrow">›</div>
+      <div class="wf-step">
+        <div class="wf-num">STEP 3</div>
+        <div class="wf-title">미리보기에서 드래그</div>
+        <div class="wf-desc">노란 점선 사각형으로 영역 지정 (마우스 드래그)</div>
+      </div>
+      <div class="wf-arrow">›</div>
+      <div class="wf-step">
+        <div class="wf-num">STEP 4</div>
+        <div class="wf-title">효과 적용</div>
+        <div class="wf-desc">버튼·셀렉트박스·텍스트 명령 중 하나로 선택</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>선택 영역에 적용 가능한 효과</h3>
+      <div class="effect-grid" style="margin-top:10px">
+        <div class="effect-chip">
+          <div class="name" style="color:var(--accent2)">📍 영역으로 줌</div>
+          <div class="desc">선택 영역을 꽉 채우는 리프레임 + Ken Burns 줌인 애니메이션 자동 추가</div>
+        </div>
+        <div class="effect-chip">
+          <div class="name">🌫 영역 블러</div>
+          <div class="desc">선택 영역만 흐리게 (얼굴·텍스트 가리기)</div>
+        </div>
+        <div class="effect-chip">
+          <div class="name">⬛ 모자이크</div>
+          <div class="desc">선택 영역 픽셀화 처리</div>
+        </div>
+        <div class="effect-chip">
+          <div class="name">🔦 스포트라이트</div>
+          <div class="desc">선택 영역 주변을 어둡게 하여 시선 집중</div>
+        </div>
+        <div class="effect-chip">
+          <div class="name">🟨 강조 박스</div>
+          <div class="desc">선택 영역에 컬러 테두리 박스 표시</div>
+        </div>
+        <div class="effect-chip">
+          <div class="name">☀ 영역 밝게</div>
+          <div class="desc">선택 영역만 밝기 높이기</div>
+        </div>
+        <div class="effect-chip">
+          <div class="name">⬜ 영역 흑백</div>
+          <div class="desc">선택 영역만 흑백 처리</div>
+        </div>
+        <div class="effect-chip">
+          <div class="name">🎨 영역 색 입히기</div>
+          <div class="desc">선택 영역에 컬러 틴트 오버레이</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>③ 텍스트 명령으로 적용</h3>
+      <p>영역 지정 후 텍스트 입력란에 키워드를 입력하고 <kbd>Enter</kbd> 또는 "명령 적용" 버튼을 누릅니다.</p>
+      <ul style="margin-top:8px">
+        <li><code style="color:var(--accent2)">줌</code> 또는 <code style="color:var(--accent2)">확대</code> → 영역으로 줌인</li>
+        <li><code style="color:var(--accent2)">블러</code> 또는 <code style="color:var(--accent2)">흐림</code> → 영역 블러</li>
+        <li><code style="color:var(--accent2)">모자이크</code> → 모자이크</li>
+        <li><code style="color:var(--accent2)">스포트라이트</code> 또는 <code style="color:var(--accent2)">어둡</code> → 스포트라이트</li>
+        <li><code style="color:var(--accent2)">강조</code> 또는 <code style="color:var(--accent2)">박스</code> → 강조 박스</li>
+        <li><code style="color:var(--accent2)">흑백</code> → 영역 흑백</li>
+        <li><code style="color:var(--accent2)">밝</code> → 영역 밝게</li>
+      </ul>
+    </div>
+
+    <div class="notice">
+      <strong>💡 영역으로 줌 — 동작 방식</strong><br/>
+      "영역으로 줌"을 적용하면 두 가지가 동시에 추가됩니다:<br/>
+      ① <strong>zoomToRegion 효과</strong> — 해당 영역을 화면 전체로 리프레임 (정적)<br/>
+      ② <strong>Ken Burns 줌인 애니메이션</strong> — 영역 크기 비율에 맞춘 배율로 클립 시작→끝 점점 확대<br/>
+      오른쪽 패널 → 애니메이션 섹션에서 "줌 인 (Ken Burns)"의 시작·끝 배율을 추가로 조정할 수 있습니다.
+    </div>
+  </section>
+
+  <!-- 6. 애니메이션 -->
+  <section id="animation">
+    <h2><span class="num">6</span> 애니메이션 추가</h2>
+
+    <p>클립을 선택하고 오른쪽 패널 → <strong>"애니메이션"</strong> 섹션에서 추가합니다. 여러 개를 쌓을 수 있으며 모두 동시에 적용됩니다.</p>
+
+    <div class="effect-grid">
+      <div class="effect-chip"><div class="name">페이드 인</div><div class="desc">시작 시 서서히 나타남</div></div>
+      <div class="effect-chip"><div class="name">페이드 아웃</div><div class="desc">끝날 때 서서히 사라짐</div></div>
+      <div class="effect-chip"><div class="name">슬라이드 인</div><div class="desc">방향 지정해 밀려 들어옴</div></div>
+      <div class="effect-chip"><div class="name">슬라이드 아웃</div><div class="desc">방향 지정해 밀려 나감</div></div>
+      <div class="effect-chip"><div class="name" style="color:var(--accent2)">줌 인 (Ken Burns)</div><div class="desc">점점 확대, 배율 조정 가능</div></div>
+      <div class="effect-chip"><div class="name" style="color:var(--accent2)">줌 아웃</div><div class="desc">점점 축소, 배율 조정 가능</div></div>
+      <div class="effect-chip"><div class="name">팝 인 (스프링)</div><div class="desc">물리 기반 튀어 들어옴</div></div>
+      <div class="effect-chip"><div class="name">회전</div><div class="desc">지정한 바퀴 수만큼 회전</div></div>
+      <div class="effect-chip"><div class="name">펄스</div><div class="desc">주기적으로 커졌다 작아짐</div></div>
+      <div class="effect-chip"><div class="name">흔들기</div><div class="desc">좌우로 반복 흔들림</div></div>
+      <div class="effect-chip"><div class="name">둥실 떠오르기</div><div class="desc">위아래로 부드럽게 움직임</div></div>
+    </div>
+
+    <div class="warn">
+      <strong>⚠ 애니메이션 파라미터</strong><br/>
+      각 애니메이션은 슬라이더로 세부 값을 조정합니다. 예) 줌인의 "시작 배율"(1.0)과 "끝 배율"(1.4~4.0).<br/>
+      추가된 애니메이션은 오른쪽 패널 목록에서 ✕ 를 눌러 제거할 수 있습니다.
+    </div>
+  </section>
+
+  <!-- 7. 필터 효과 -->
+  <section id="effects">
+    <h2><span class="num">7</span> Remotion 필터 효과 (영상·이미지 전체)</h2>
+
+    <p>오른쪽 패널 → <strong>"영상 필터"</strong> 섹션. WebGL 기반 고품질 효과입니다. 영상·이미지 클립에만 적용됩니다.</p>
+
+    <div class="effect-grid">
+      <div class="effect-chip"><div class="name">블러</div><div class="desc">가우시안 블러 (반경 조정)</div></div>
+      <div class="effect-chip"><div class="name">픽셀화</div><div class="desc">블록 크기 조정</div></div>
+      <div class="effect-chip"><div class="name">비네트</div><div class="desc">가장자리 어둡게</div></div>
+      <div class="effect-chip"><div class="name">글로우</div><div class="desc">발광 효과, 임계값 조정</div></div>
+      <div class="effect-chip"><div class="name">색수차</div><div class="desc">RGB 채널 분리 효과</div></div>
+      <div class="effect-chip"><div class="name">흑백</div><div class="desc">채도 제거 (강도 조정)</div></div>
+      <div class="effect-chip"><div class="name">밝기 / 대비</div><div class="desc">값 1.0 기준 조정</div></div>
+      <div class="effect-chip"><div class="name">채도</div><div class="desc">색상 포화도 조정</div></div>
+      <div class="effect-chip"><div class="name">색조 회전</div><div class="desc">Hue 0~360° 조정</div></div>
+      <div class="effect-chip"><div class="name">색 반전</div><div class="desc">네거티브 효과</div></div>
+      <div class="effect-chip"><div class="name">스캔라인</div><div class="desc">레트로 TV 줄 무늬</div></div>
+    </div>
+  </section>
+
+  <!-- 8. 트랜지션 -->
+  <section id="transition">
+    <h2><span class="num">8</span> 등장 트랜지션</h2>
+
+    <p>클립 선택 → 오른쪽 패널 → <strong>"등장 트랜지션"</strong> 드롭다운으로 클립이 화면에 나타날 때 재생되는 효과를 지정합니다.</p>
+
+    <div class="card">
+      <ul>
+        <li><strong>없음</strong> — 즉시 나타남 (기본값)</li>
+        <li><strong>페이드</strong> — 서서히 나타남</li>
+        <li><strong>슬라이드</strong> — 왼쪽에서 밀려 들어옴</li>
+        <li><strong>와이프</strong> — 오른쪽에서 닦아내듯 나타남</li>
+        <li><strong>플립</strong> — 3D 뒤집기 효과</li>
+        <li><strong>세로 와이프</strong> — 위에서 아래로 닦아내듯 나타남</li>
+      </ul>
+      <p style="margin-top:8px">트랜지션 선택 후 <strong>"길이(프레임)"</strong> 슬라이더로 지속 시간을 조정하세요.</p>
+    </div>
+  </section>
+
+  <!-- 9. 단축키 -->
+  <section id="shortcuts">
+    <h2><span class="num">9</span> 키보드 단축키</h2>
+
+    <div class="shortcut-grid">
+      <div class="shortcut"><kbd>Space</kbd> <span>재생 / 일시정지</span></div>
+      <div class="shortcut"><kbd>S</kbd> <span>플레이헤드에서 클립 분할</span></div>
+      <div class="shortcut"><kbd>Delete</kbd> <span>선택된 클립 삭제</span></div>
+      <div class="shortcut"><kbd>Backspace</kbd> <span>선택된 클립 삭제</span></div>
+      <div class="shortcut"><kbd>← →</kbd> <span>1프레임 앞/뒤 이동</span></div>
+      <div class="shortcut"><kbd>Shift + ← →</kbd> <span>1초(1fps) 앞/뒤 이동</span></div>
+    </div>
+
+    <div class="notice" style="margin-top:20px">
+      <strong>💡 입력 필드(텍스트/숫자)에서는 단축키가 비활성화됩니다.</strong><br/>
+      텍스트 내용·숫자를 입력 중일 때는 Space·S·Delete 단축키가 작동하지 않습니다. 입력 완료 후 빈 영역을 클릭해 포커스를 해제하세요.
+    </div>
+  </section>
+
+  <hr/>
+  <p style="text-align:center;color:var(--muted);font-size:12px">
+    Remotion 웹 에디터 &nbsp;·&nbsp; 미리보기는 @remotion/player 기반 실시간 렌더링 &nbsp;·&nbsp;
+    <a href="http://localhost:5273" style="color:var(--accent)">에디터 열기 →</a>
+  </p>
+
+</div>
+</body>
+</html>

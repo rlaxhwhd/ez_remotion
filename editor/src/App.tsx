@@ -1,0 +1,102 @@
+import React, { useEffect, useRef } from "react";
+import type { PlayerRef } from "@remotion/player";
+import { MediaPanel } from "./components/MediaPanel";
+import { PreviewPanel } from "./components/PreviewPanel";
+import { Inspector } from "./components/Inspector";
+import { Timeline } from "./components/Timeline";
+import { useStore } from "./store";
+
+const fmt = (frame: number, fps: number) => {
+  const totalSec = frame / fps;
+  const m = Math.floor(totalSec / 60);
+  const s = Math.floor(totalSec % 60);
+  const f = Math.floor(frame % fps);
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(f).padStart(2, "0")}`;
+};
+
+export const App: React.FC = () => {
+  const playerRef = useRef<PlayerRef | null>(null);
+  const project = useStore((s) => s.project);
+  const currentFrame = useStore((s) => s.currentFrame);
+  const isPlaying = useStore((s) => s.isPlaying);
+  const splitAtPlayhead = useStore((s) => s.splitAtPlayhead);
+  const selectedClipId = useStore((s) => s.selectedClipId);
+  const removeClip = useStore((s) => s.removeClip);
+  const setCurrentFrame = useStore((s) => s.setCurrentFrame);
+
+  const togglePlay = () => {
+    const p = playerRef.current;
+    if (!p) return;
+    if (p.isPlaying()) p.pause();
+    else p.play();
+  };
+
+  const seek = (frame: number) => {
+    const f = Math.max(0, Math.min(project.durationInFrames - 1, Math.round(frame)));
+    setCurrentFrame(f);
+    playerRef.current?.seekTo(f);
+  };
+
+  // keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.code === "Space") {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.key === "s" || e.key === "S") {
+        splitAtPlayhead();
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        if (selectedClipId) removeClip(selectedClipId);
+      } else if (e.key === "ArrowLeft") {
+        seek(currentFrame - (e.shiftKey ? project.fps : 1));
+      } else if (e.key === "ArrowRight") {
+        seek(currentFrame + (e.shiftKey ? project.fps : 1));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [currentFrame, selectedClipId, project.fps, project.durationInFrames]);
+
+  return (
+    <div className="app">
+      <header className="header">
+        <span className="logo">🎬 Remotion 웹 에디터</span>
+        <span className="muted" style={{ fontSize: 11 }}>
+          컷편집 · 줌 · 애니메이션 · 영역 연출 효과
+        </span>
+        <div className="spacer" />
+        <span className="muted" style={{ fontSize: 11 }}>
+          {project.width}×{project.height} · {project.fps}fps · {(project.durationInFrames / project.fps).toFixed(1)}s
+        </span>
+      </header>
+
+      <div className="main">
+        <MediaPanel />
+        <div className="center">
+          <PreviewPanel playerRef={playerRef} />
+          <div className="transport">
+            <button onClick={() => seek(0)}>⏮</button>
+            <button className="primary" onClick={togglePlay} style={{ minWidth: 56 }}>
+              {isPlaying ? "❚❚ 정지" : "▶ 재생"}
+            </button>
+            <button onClick={() => seek(project.durationInFrames - 1)}>⏭</button>
+            <button onClick={splitAtPlayhead} title="플레이헤드에서 분할 (S)">
+              ✂ 분할
+            </button>
+            <button className="danger" disabled={!selectedClipId} onClick={() => selectedClipId && removeClip(selectedClipId)}>
+              🗑 삭제
+            </button>
+            <div className="spacer" style={{ flex: 1 }} />
+            <span className="time">
+              {fmt(currentFrame, project.fps)} / {fmt(project.durationInFrames, project.fps)}
+            </span>
+          </div>
+          <Timeline playerRef={playerRef} />
+        </div>
+        <Inspector />
+      </div>
+    </div>
+  );
+};
