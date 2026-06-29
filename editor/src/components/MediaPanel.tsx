@@ -1,6 +1,9 @@
 import React from "react";
 import { useStore } from "../store";
 import { loadVideoMeta, loadImageMeta, loadAudioMeta, guessKind } from "../lib/media";
+import { putAsset } from "../lib/persist";
+
+const newAssetId = () => Math.random().toString(36).slice(2, 12);
 
 export const MediaPanel: React.FC = () => {
   const project = useStore((s) => s.project);
@@ -21,10 +24,14 @@ export const MediaPanel: React.FC = () => {
         continue;
       }
       try {
+        // keep the raw bytes so the clip survives a page reload
+        const assetId = newAssetId();
+        await putAsset(assetId, file);
         if (kind === "video") {
           const m = await loadVideoMeta(file);
           addVideoClip({
             src: m.src,
+            assetId,
             naturalWidth: m.width,
             naturalHeight: m.height,
             durationInFrames: Math.max(1, Math.round(m.durationSeconds * fps)),
@@ -32,11 +39,12 @@ export const MediaPanel: React.FC = () => {
           });
         } else if (kind === "image") {
           const m = await loadImageMeta(file);
-          addImageClip({ src: m.src, naturalWidth: m.width, naturalHeight: m.height, name: file.name });
+          addImageClip({ src: m.src, assetId, naturalWidth: m.width, naturalHeight: m.height, name: file.name });
         } else if (kind === "audio") {
           const m = await loadAudioMeta(file);
           addAudioClip({
             src: m.src,
+            assetId,
             durationInFrames: Math.max(1, Math.round(m.durationSeconds * fps)),
             name: file.name,
           });

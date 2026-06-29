@@ -1,9 +1,27 @@
 import React, { useRef } from "react";
 import type { PlayerRef } from "@remotion/player";
 import { useStore } from "../store";
-import type { Clip, VideoClip, AudioClip } from "../types";
+import type { Clip, Track, VideoClip, AudioClip } from "../types";
+import { animationRegistry } from "../remotion/animations";
+import { filterEffectRegistry, regionEffectRegistry } from "../remotion/effects";
 
 const LABEL_W = 110;
+// Vertical layout of a track row: the clip on top, then one mini "sub-clip" bar
+// per attached animation / effect stacked beneath it.
+const ROW_TOP = 5;
+const CLIP_H = 38;
+const SUB_H = 16;
+const SUB_GAP = 3;
+const ROW_BOTTOM = 6;
+
+type Badge = { label: string; cls: "anim" | "effect" };
+const clipBadges = (clip: Clip): Badge[] => [
+  ...clip.animations.map((a) => ({ label: animationRegistry[a.type]?.label ?? a.type, cls: "anim" as const })),
+  ...clip.effects.map((e) => ({
+    label: (filterEffectRegistry[e.type] ?? regionEffectRegistry[e.type])?.label ?? e.type,
+    cls: "effect" as const,
+  })),
+];
 
 const clipColor = (kind: Clip["kind"]): string => {
   switch (kind) {
@@ -35,6 +53,17 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
 
   const totalFrames = Math.max(project.durationInFrames + project.fps * 2, project.fps * 5);
   const contentWidth = LABEL_W + totalFrames * ppf;
+
+  // A track row grows to fit the clip with the most attached animations/effects.
+  const trackBadgeRows = (track: Track) => {
+    const counts = project.clips.filter((c) => c.trackId === track.id).map((c) => clipBadges(c).length);
+    return counts.length ? Math.max(...counts) : 0;
+  };
+  const trackHeight = (track: Track) => {
+    const n = trackBadgeRows(track);
+    return ROW_TOP + CLIP_H + ROW_BOTTOM + (n ? SUB_GAP + n * SUB_H : 0);
+  };
+  const tracksHeight = project.tracks.reduce((sum, t) => sum + trackHeight(t), 0);
 
   const seek = (frame: number) => {
     const f = Math.max(0, Math.round(frame));
@@ -128,34 +157,44 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
           </div>
 
           {project.tracks.map((track) => (
-            <div key={track.id} className="track-row">
+            <div key={track.id} className="track-row" style={{ height: trackHeight(track) }}>
               <div className="track-label">{track.name}</div>
               {project.clips
                 .filter((c) => c.trackId === track.id)
-                .map((clip) => (
-                  <div
-                    key={clip.id}
-                    className={"clip" + (clip.id === selectedClipId ? " selected" : "")}
-                    style={{
-                      left: LABEL_W + clip.start * ppf,
-                      width: Math.max(8, clip.duration * ppf),
-                      background: clipColor(clip.kind),
-                    }}
-                    onMouseDown={(e) => startDrag(e, clip, "move")}
-                    title={clip.name}
-                  >
-                    <div className="handle l" onMouseDown={(e) => startDrag(e, clip, "left")} />
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{clip.name}</span>
-                    <div className="handle r" onMouseDown={(e) => startDrag(e, clip, "right")} />
-                  </div>
-                ))}
+                .map((clip) => {
+                  const left = LABEL_W + clip.start * ppf;
+                  const width = Math.max(8, clip.duration * ppf);
+                  return (
+                    <React.Fragment key={clip.id}>
+                      <div
+                        className={"clip" + (clip.id === selectedClipId ? " selected" : "")}
+                        style={{ left, width, top: ROW_TOP, height: CLIP_H, background: clipColor(clip.kind) }}
+                        onMouseDown={(e) => startDrag(e, clip, "move")}
+                        title={clip.name}
+                      >
+                        <div className="handle l" onMouseDown={(e) => startDrag(e, clip, "left")} />
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{clip.name}</span>
+                        <div className="handle r" onMouseDown={(e) => startDrag(e, clip, "right")} />
+                      </div>
+                      {clipBadges(clip).map((b, i) => (
+                        <div
+                          key={i}
+                          className={"subclip " + b.cls}
+                          style={{ left, width, top: ROW_TOP + CLIP_H + SUB_GAP + i * SUB_H, height: SUB_H - 2 }}
+                          title={b.label}
+                          onMouseDown={(e) => startDrag(e, clip, "move")}
+                        >
+                          {b.cls === "anim" ? "✨ " : "🎨 "}
+                          {b.label}
+                        </div>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
             </div>
           ))}
 
-          <div
-            className="playhead"
-            style={{ left: playheadX, height: 22 + project.tracks.length * 56 }}
-          />
+          <div className="playhead" style={{ left: playheadX, height: 22 + tracksHeight }} />
         </div>
       </div>
     </div>

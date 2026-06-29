@@ -58,6 +58,7 @@ type ClipBase = {
 export type VideoClip = ClipBase & {
   kind: "video";
   src: string;
+  assetId?: string; // IndexedDB key for the uploaded file (for reload persistence)
   naturalWidth: number;
   naturalHeight: number;
   naturalDurationInFrames: number;
@@ -70,6 +71,7 @@ export type VideoClip = ClipBase & {
 export type ImageClip = ClipBase & {
   kind: "image";
   src: string;
+  assetId?: string;
   naturalWidth: number;
   naturalHeight: number;
 };
@@ -97,6 +99,7 @@ export type ShapeClip = ClipBase & {
 export type AudioClip = ClipBase & {
   kind: "audio";
   src: string;
+  assetId?: string;
   naturalDurationInFrames: number;
   trimStart: number;
   volume: number;

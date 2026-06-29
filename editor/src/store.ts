@@ -16,11 +16,9 @@ import type {
 import { defaultTransform } from "./types";
 import { animationRegistry, defaultParamsFor } from "./remotion/animations";
 import { filterEffectRegistry, regionEffectRegistry } from "./remotion/effects";
+import { saveProject } from "./lib/persist";
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-
-const MEDIA_TRACK = "track-media";
-const AUDIO_TRACK = "track-audio";
 
 const initialProject = (): Project => ({
   width: 1280,
@@ -28,10 +26,8 @@ const initialProject = (): Project => ({
   fps: 30,
   durationInFrames: 150,
   background: "#000000",
-  tracks: [
-    { id: MEDIA_TRACK, name: "비디오/이미지", kind: "media", hidden: false, muted: false },
-    { id: AUDIO_TRACK, name: "오디오", kind: "audio", hidden: false, muted: false },
-  ],
+  // Each added clip gets its own track (a vertical row in the timeline).
+  tracks: [],
   clips: [],
 });
 
@@ -55,11 +51,12 @@ type State = {
   setPixelsPerFrame: (p: number) => void;
   setPendingRegion: (r: Rect | null) => void;
   setProjectMeta: (meta: Partial<Pick<Project, "width" | "height" | "fps" | "background">>) => void;
+  replaceProject: (project: Project) => void;
 
   // adding clips
-  addVideoClip: (data: { src: string; naturalWidth: number; naturalHeight: number; durationInFrames: number; name: string }) => void;
-  addImageClip: (data: { src: string; naturalWidth: number; naturalHeight: number; name: string }) => void;
-  addAudioClip: (data: { src: string; durationInFrames: number; name: string }) => void;
+  addVideoClip: (data: { src: string; assetId?: string; naturalWidth: number; naturalHeight: number; durationInFrames: number; name: string }) => void;
+  addImageClip: (data: { src: string; assetId?: string; naturalWidth: number; naturalHeight: number; name: string }) => void;
+  addAudioClip: (data: { src: string; assetId?: string; durationInFrames: number; name: string }) => void;
   addTextClip: () => void;
   addShapeClip: () => void;
 
@@ -100,6 +97,14 @@ const baseClip = (trackId: string, start: number, duration: number, kind: Clip["
   transitionIn: { kind: "none" as const, durationInFrames: 15 },
 });
 
+// Create a dedicated track (one timeline row per clip) and return its id.
+// Newest goes to the front of the list so it renders on top of older clips.
+const spawnTrack = (project: Project, name: string, kind: Track["kind"]): string => {
+  const id = uid();
+  project.tracks.unshift({ id, name, kind, hidden: false, muted: false });
+  return id;
+};
+
 export const useStore = create<State>((set, get) => {
   const mutateProject = (fn: (p: Project) => void) =>
     set((s) => {
@@ -134,16 +139,18 @@ export const useStore = create<State>((set, get) => {
     setPixelsPerFrame: (p) => set({ pixelsPerFrame: Math.max(0.3, Math.min(40, p)) }),
     setPendingRegion: (r) => set({ pendingRegion: r }),
     setProjectMeta: (meta) => mutateProject((p) => Object.assign(p, meta)),
+    replaceProject: (project) => set({ project, selectedClipId: null }),
 
-    addVideoClip: ({ src, naturalWidth, naturalHeight, durationInFrames, name }) => {
+    addVideoClip: ({ src, assetId, naturalWidth, naturalHeight, durationInFrames, name }) => {
       const id = uid();
       set((s) => {
         const project = structuredCloneProject(s.project);
         const clip: VideoClip = {
-          ...baseClip(MEDIA_TRACK, Math.round(s.currentFrame), durationInFrames, "video", name),
+          ...baseClip(spawnTrack(project, name, "media"), Math.round(s.currentFrame), durationInFrames, "video", name),
           id,
           kind: "video",
           src,
+          assetId,
           naturalWidth,
           naturalHeight,
           naturalDurationInFrames: durationInFrames,
@@ -162,15 +169,16 @@ export const useStore = create<State>((set, get) => {
       });
     },
 
-    addImageClip: ({ src, naturalWidth, naturalHeight, name }) => {
+    addImageClip: ({ src, assetId, naturalWidth, naturalHeight, name }) => {
       const id = uid();
       set((s) => {
         const project = structuredCloneProject(s.project);
         const clip: ImageClip = {
-          ...baseClip(MEDIA_TRACK, Math.round(s.currentFrame), 90, "image", name),
+          ...baseClip(spawnTrack(project, name, "media"), Math.round(s.currentFrame), 90, "image", name),
           id,
           kind: "image",
           src,
+          assetId,
           naturalWidth,
           naturalHeight,
         };
@@ -180,15 +188,16 @@ export const useStore = create<State>((set, get) => {
       });
     },
 
-    addAudioClip: ({ src, durationInFrames, name }) => {
+    addAudioClip: ({ src, assetId, durationInFrames, name }) => {
       const id = uid();
       set((s) => {
         const project = structuredCloneProject(s.project);
         const clip: AudioClip = {
-          ...baseClip(AUDIO_TRACK, Math.round(s.currentFrame), durationInFrames, "audio", name),
+          ...baseClip(spawnTrack(project, name, "audio"), Math.round(s.currentFrame), durationInFrames, "audio", name),
           id,
           kind: "audio",
           src,
+          assetId,
           naturalDurationInFrames: durationInFrames,
           trimStart: 0,
           volume: 1,
@@ -205,7 +214,7 @@ export const useStore = create<State>((set, get) => {
       set((s) => {
         const project = structuredCloneProject(s.project);
         const clip: TextClip = {
-          ...baseClip(MEDIA_TRACK, Math.round(s.currentFrame), 90, "text", "텍스트"),
+          ...baseClip(spawnTrack(project, "텍스트", "media"), Math.round(s.currentFrame), 90, "text", "텍스트"),
           id,
           kind: "text",
           text: "여기에 텍스트",
@@ -227,7 +236,7 @@ export const useStore = create<State>((set, get) => {
       set((s) => {
         const project = structuredCloneProject(s.project);
         const clip: ShapeClip = {
-          ...baseClip(MEDIA_TRACK, Math.round(s.currentFrame), 90, "shape", "도형"),
+          ...baseClip(spawnTrack(project, "도형", "media"), Math.round(s.currentFrame), 90, "shape", "도형"),
           id,
           kind: "shape",
           shape: "rect",
@@ -248,6 +257,8 @@ export const useStore = create<State>((set, get) => {
       set((s) => {
         const project = structuredCloneProject(s.project);
         project.clips = project.clips.filter((c) => c.id !== id);
+        // Drop the clip's now-empty track so no blank row lingers.
+        project.tracks = project.tracks.filter((t) => project.clips.some((c) => c.trackId === t.id));
         project.durationInFrames = recalcDuration(project);
         return { project, selectedClipId: s.selectedClipId === id ? null : s.selectedClipId };
       }),
@@ -351,6 +362,14 @@ export const useStore = create<State>((set, get) => {
 function structuredCloneProject(p: Project): Project {
   return structuredClone(p);
 }
+
+// Persist the project to localStorage whenever it changes (debounced).
+let saveTimer: ReturnType<typeof setTimeout> | undefined;
+useStore.subscribe((s, prev) => {
+  if (s.project === prev.project) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveProject(useStore.getState().project), 300);
+});
 
 export const selectedClip = (s: State): Clip | null =>
   s.project.clips.find((c) => c.id === s.selectedClipId) ?? null;

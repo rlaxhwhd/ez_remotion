@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
 import { VideoComposition } from "../remotion/VideoComposition";
-import { useStore } from "../store";
+import { useStore, selectedClip } from "../store";
 import type { Rect } from "../types";
 
 export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }> = ({ playerRef }) => {
@@ -11,11 +11,15 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
   const setPendingRegion = useStore((s) => s.setPendingRegion);
   const setCurrentFrame = useStore((s) => s.setCurrentFrame);
   const setPlaying = useStore((s) => s.setPlaying);
+  const selClip = useStore(selectedClip);
+  const updateClip = useStore((s) => s.updateClip);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [stageSize, setStageSize] = useState({ w: 640, h: 360 });
   const [drag, setDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  // active drag-to-move of the selected clip's position (transform x/y)
+  const [moveDrag, setMoveDrag] = useState<{ x0: number; y0: number; origX: number; origY: number } | null>(null);
 
   // fit the stage into the available area, preserving the composition aspect ratio
   useEffect(() => {
@@ -85,6 +89,25 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
     setDrag(null);
   };
 
+  // ── drag-to-move the selected clip in the preview (select tool) ────────────
+  const onMoveDown = (e: React.MouseEvent) => {
+    if (!selClip || selClip.kind === "audio") return;
+    setMoveDrag({ x0: e.clientX, y0: e.clientY, origX: selClip.transform.x, origY: selClip.transform.y });
+  };
+  const onMoveMove = (e: React.MouseEvent) => {
+    if (!moveDrag || !selClip) return;
+    const sx = project.width / stageSize.w;
+    const sy = project.height / stageSize.h;
+    updateClip(selClip.id, {
+      transform: {
+        ...selClip.transform,
+        x: Math.round(moveDrag.origX + (e.clientX - moveDrag.x0) * sx),
+        y: Math.round(moveDrag.origY + (e.clientY - moveDrag.y0) * sy),
+      },
+    });
+  };
+  const onMoveUp = () => setMoveDrag(null);
+
   // visual rect for pending region or active drag
   const liveRect =
     drag && stageRef.current
@@ -136,6 +159,16 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
               />
             )}
           </div>
+        )}
+        {tool === "select" && selClip && selClip.kind !== "audio" && (
+          <div
+            className="move-overlay"
+            style={{ cursor: moveDrag ? "grabbing" : "grab" }}
+            onMouseDown={onMoveDown}
+            onMouseMove={onMoveMove}
+            onMouseUp={onMoveUp}
+            onMouseLeave={onMoveUp}
+          />
         )}
       </div>
     </div>

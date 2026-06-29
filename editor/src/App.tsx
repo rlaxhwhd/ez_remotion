@@ -5,6 +5,7 @@ import { PreviewPanel } from "./components/PreviewPanel";
 import { Inspector } from "./components/Inspector";
 import { Timeline } from "./components/Timeline";
 import { useStore } from "./store";
+import { loadProject } from "./lib/persist";
 
 const fmt = (frame: number, fps: number) => {
   const totalSec = frame / fps;
@@ -23,6 +24,14 @@ export const App: React.FC = () => {
   const selectedClipId = useStore((s) => s.selectedClipId);
   const removeClip = useStore((s) => s.removeClip);
   const setCurrentFrame = useStore((s) => s.setCurrentFrame);
+  const replaceProject = useStore((s) => s.replaceProject);
+
+  // restore the saved project (and its media) on first load
+  useEffect(() => {
+    loadProject().then((p) => {
+      if (p) replaceProject(p);
+    });
+  }, [replaceProject]);
 
   const togglePlay = () => {
     const p = playerRef.current;
