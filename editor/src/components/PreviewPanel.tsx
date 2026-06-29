@@ -16,6 +16,7 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
 
   const stageRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const isPlayingRef = useRef(false);
   const [stageSize, setStageSize] = useState({ w: 640, h: 360 });
   const [drag, setDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   // active drag-to-move of the selected clip's position (transform x/y)
@@ -48,9 +49,14 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
   useEffect(() => {
     const ref = playerRef.current;
     if (!ref) return;
-    const onFrame = (e: { detail: { frame: number } }) => setCurrentFrame(e.detail.frame);
-    const onPlay = () => setPlaying(true);
-    const onPause = () => setPlaying(false);
+    const onFrame = (e: { detail: { frame: number } }) => {
+      const f = e.detail.frame;
+      // Throttle to every 3rd frame during playback — reduces React re-render overhead
+      // that would otherwise cause the video to drift ahead of Remotion's frame counter.
+      if (!isPlayingRef.current || f % 3 === 0) setCurrentFrame(f);
+    };
+    const onPlay = () => { isPlayingRef.current = true; setPlaying(true); };
+    const onPause = () => { isPlayingRef.current = false; setPlaying(false); };
     ref.addEventListener("frameupdate", onFrame);
     ref.addEventListener("play", onPlay);
     ref.addEventListener("pause", onPause);

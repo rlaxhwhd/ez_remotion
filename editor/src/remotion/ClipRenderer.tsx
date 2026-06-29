@@ -1,18 +1,18 @@
 import React from "react";
 import {
   AbsoluteFill,
-  CanvasImage,
+  Img,
+  Video,
   Audio,
   useCurrentFrame,
   useVideoConfig,
   interpolate,
   Easing,
 } from "remotion";
-import { Video } from "@remotion/media";
 import { Rect as ShapeRect, Circle, Triangle, Star, Ellipse } from "@remotion/shapes";
 import type { Clip } from "../types";
 import { composeAnimations } from "./animations";
-import { regionEffectRegistry, filterEffectRegistry } from "./effects";
+import { regionEffectRegistry } from "./effects";
 
 const transitionStyle = (
   kind: string,
@@ -43,29 +43,29 @@ const transitionStyle = (
 };
 
 const InnerContent: React.FC<{ clip: Clip }> = ({ clip }) => {
-  const { width, height } = useVideoConfig();
-  // WebGL filter effects (@remotion/effects) for canvas-based media components.
-  const filters =
-    clip.kind === "video" || clip.kind === "image"
-      ? clip.effects.map((e) => filterEffectRegistry[e.type]?.build(e.params)).filter(Boolean)
-      : [];
   switch (clip.kind) {
     case "video":
       return (
         <Video
           src={clip.src}
-          trimBefore={clip.trimStart}
+          startFrom={clip.trimStart}
           volume={clip.muted ? 0 : clip.volume}
           playbackRate={clip.playbackRate}
-          style={{ width: "100%", height: "100%" }}
-          objectFit="contain"
-          effects={filters}
+          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+          acceptableTimeShiftInSeconds={999}
         />
       );
     case "image":
-      return <CanvasImage src={clip.src} width={width} height={height} fit="contain" effects={filters} />;
+      return <Img src={clip.src} style={{ width: "100%", height: "100%", objectFit: "contain" }} />;
     case "audio":
-      return <Audio src={clip.src} startFrom={clip.trimStart} volume={clip.muted ? 0 : clip.volume} />;
+      return (
+        <Audio
+          src={clip.src}
+          startFrom={clip.trimStart}
+          volume={clip.muted ? 0 : clip.volume}
+          acceptableTimeShiftInSeconds={999}
+        />
+      );
     case "text":
       return (
         <AbsoluteFill

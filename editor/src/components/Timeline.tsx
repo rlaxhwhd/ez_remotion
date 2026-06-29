@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import type { PlayerRef } from "@remotion/player";
 import { useStore } from "../store";
 import type { Clip, Track, VideoClip, AudioClip } from "../types";
@@ -49,7 +49,26 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
   const currentFrame = useStore((s) => s.currentFrame);
   const setCurrentFrame = useStore((s) => s.setCurrentFrame);
 
+  const [timelineHeight, setTimelineHeight] = useState(220);
+  const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
+
   const bodyRef = useRef<HTMLDivElement>(null);
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = timelineHeight;
+    const onMove = (me: MouseEvent) => {
+      const delta = startY - me.clientY;
+      setTimelineHeight(Math.max(100, Math.min(600, startH + delta)));
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
 
   const totalFrames = Math.max(project.durationInFrames + project.fps * 2, project.fps * 5);
   const contentWidth = LABEL_W + totalFrames * ppf;
@@ -134,7 +153,8 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
   const playheadX = LABEL_W + currentFrame * ppf;
 
   return (
-    <div className="timeline">
+    <div className="timeline" style={{ height: timelineHeight }}>
+      <div className="timeline-resize-handle" onMouseDown={startResize} />
       <div className="timeline-head">
         <strong style={{ fontSize: 12 }}>타임라인</strong>
         <span className="muted">컷편집: 클립 선택 후 상단 ✂ 분할 / Del 삭제</span>
@@ -176,18 +196,27 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{clip.name}</span>
                         <div className="handle r" onMouseDown={(e) => startDrag(e, clip, "right")} />
                       </div>
-                      {clipBadges(clip).map((b, i) => (
-                        <div
-                          key={i}
-                          className={"subclip " + b.cls}
-                          style={{ left, width, top: ROW_TOP + CLIP_H + SUB_GAP + i * SUB_H, height: SUB_H - 2 }}
-                          title={b.label}
-                          onMouseDown={(e) => startDrag(e, clip, "move")}
-                        >
-                          {b.cls === "anim" ? "✨ " : "🎨 "}
-                          {b.label}
-                        </div>
-                      ))}
+                      {clipBadges(clip).map((b, i) => {
+                        const subId = b.cls === "anim"
+                          ? clip.animations[i]?.id
+                          : clip.effects[i - clip.animations.length]?.id;
+                        return (
+                          <div
+                            key={i}
+                            className={"subclip " + b.cls + (selectedSubId === subId ? " sub-selected" : "")}
+                            style={{ left, width, top: ROW_TOP + CLIP_H + SUB_GAP + i * SUB_H, height: SUB_H - 2 }}
+                            title={b.label}
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                              selectClip(clip.id);
+                              setSelectedSubId(subId ?? null);
+                            }}
+                          >
+                            {b.cls === "anim" ? "✨ " : "🎨 "}
+                            {b.label}
+                          </div>
+                        );
+                      })}
                     </React.Fragment>
                   );
                 })}

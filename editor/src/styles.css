@@ -221,11 +221,20 @@ input[type="range"] {
 }
 
 .timeline {
-  height: 220px;
   display: flex;
   flex-direction: column;
   background: var(--panel);
-  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.timeline-resize-handle {
+  height: 5px;
+  cursor: row-resize;
+  background: var(--border);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.timeline-resize-handle:hover {
+  background: var(--accent);
 }
 .timeline-head {
   display: flex;
@@ -315,6 +324,10 @@ input[type="range"] {
 }
 .subclip.effect {
   background: #c2701c;
+}
+.subclip.sub-selected {
+  outline: 1px solid var(--accent-2);
+  z-index: 3;
 }
 .clip .handle {
   position: absolute;
