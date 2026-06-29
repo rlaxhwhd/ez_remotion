@@ -42,6 +42,9 @@ export const Inspector: React.FC = () => {
 
   const [regionSelect, setRegionSelect] = useState("regionBlur");
   const [regionCmd, setRegionCmd] = useState("");
+  const [inSel, setInSel] = useState("");
+  const [outSel, setOutSel] = useState("");
+  const [emphSel, setEmphSel] = useState("");
 
   if (!clip) {
     return (
@@ -179,42 +182,66 @@ export const Inspector: React.FC = () => {
       {/* Animations */}
       {clip.kind !== "audio" && (
         <div className="section">
-          <h3>애니메이션 (줌인/줌아웃 포함)</h3>
-          <div className="field">
-            <select id="anim-add" defaultValue="">
-              <option value="" disabled>
-                ＋ 애니메이션 추가…
-              </option>
-              {animationList.map((a) => (
-                <option key={a.type} value={a.type}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
+          <h3>애니메이션</h3>
+
+          {/* 입장 */}
+          <div className="anim-cat-row">
+            <span className="anim-cat-label" style={{ color: "#1f9e6b" }}>▶ 입장 (In)</span>
+            <div className="row" style={{ gap: 4, marginTop: 4 }}>
+              <select style={{ flex: 1 }} value={inSel} onChange={(e) => setInSel(e.target.value)}>
+                <option value="">선택…</option>
+                {animationList.filter((a) => a.category === "in").map((a) => (
+                  <option key={a.type} value={a.type}>{a.label}</option>
+                ))}
+              </select>
+              <button style={{ flexShrink: 0 }} onClick={() => { if (inSel) { addAnimation(clip.id, inSel); setInSel(""); } }}>＋</button>
+            </div>
           </div>
-          <button
-            style={{ width: "100%", marginBottom: 8 }}
-            onClick={() => {
-              const sel = document.getElementById("anim-add") as HTMLSelectElement;
-              if (sel?.value) {
-                addAnimation(clip.id, sel.value);
-                sel.value = "";
-              }
-            }}
-          >
-            추가
-          </button>
-          {clip.animations.length === 0 && <p className="hint">줌인/줌아웃, 페이드, 슬라이드, 회전 등.</p>}
+
+          {/* 강조 */}
+          <div className="anim-cat-row">
+            <span className="anim-cat-label" style={{ color: "#c2701c" }}>✦ 강조 (Emphasis)</span>
+            <div className="row" style={{ gap: 4, marginTop: 4 }}>
+              <select style={{ flex: 1 }} value={emphSel} onChange={(e) => setEmphSel(e.target.value)}>
+                <option value="">선택…</option>
+                {animationList.filter((a) => a.category === "emphasis").map((a) => (
+                  <option key={a.type} value={a.type}>{a.label}</option>
+                ))}
+              </select>
+              <button style={{ flexShrink: 0 }} onClick={() => { if (emphSel) { addAnimation(clip.id, emphSel); setEmphSel(""); } }}>＋</button>
+            </div>
+          </div>
+
+          {/* 퇴장 */}
+          <div className="anim-cat-row">
+            <span className="anim-cat-label" style={{ color: "#ff5b6e" }}>◀ 퇴장 (Out)</span>
+            <div className="row" style={{ gap: 4, marginTop: 4 }}>
+              <select style={{ flex: 1 }} value={outSel} onChange={(e) => setOutSel(e.target.value)}>
+                <option value="">선택…</option>
+                {animationList.filter((a) => a.category === "out").map((a) => (
+                  <option key={a.type} value={a.type}>{a.label}</option>
+                ))}
+              </select>
+              <button style={{ flexShrink: 0 }} onClick={() => { if (outSel) { addAnimation(clip.id, outSel); setOutSel(""); } }}>＋</button>
+            </div>
+          </div>
+
+          {/* 적용된 애니메이션 목록 */}
+          {clip.animations.length === 0 && <p className="hint" style={{ marginTop: 10 }}>입장·퇴장·강조를 동시에 적용할 수 있습니다.</p>}
+          {clip.animations.length > 0 && <div style={{ height: 1, background: "var(--border)", margin: "10px 0" }} />}
           {clip.animations.map((a) => {
             const def = animationRegistry[a.type];
             if (!def) return null;
+            const catColor = def.category === "in" ? "#1f9e6b" : def.category === "out" ? "#ff5b6e" : "#c2701c";
+            const catLabel = def.category === "in" ? "▶ 입장" : def.category === "out" ? "◀ 퇴장" : "✦ 강조";
             return (
-              <div key={a.id} className="section" style={{ padding: "8px 0", borderBottom: "none" }}>
+              <div key={a.id} style={{ marginBottom: 8 }}>
                 <div className="chip">
-                  <strong>{def.label}</strong>
-                  <span className="x" onClick={() => removeAnimation(clip.id, a.id)}>
-                    ✕
+                  <span>
+                    <span style={{ color: catColor, fontSize: 10, marginRight: 5 }}>{catLabel}</span>
+                    <strong>{def.label}</strong>
                   </span>
+                  <span className="x" onClick={() => removeAnimation(clip.id, a.id)}>✕</span>
                 </div>
                 <ParamControls specs={def.params} values={a.params} onChange={(k, v) => updateAnimationParam(clip.id, a.id, k, v)} />
               </div>

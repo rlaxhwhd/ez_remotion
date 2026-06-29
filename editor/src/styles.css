@@ -397,6 +397,16 @@ input[type="range"] {
   padding: 1px 5px;
   margin-left: 6px;
 }
+.anim-cat-row {
+  margin-bottom: 10px;
+}
+.anim-cat-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .empty-hint {
   color: var(--muted);
   text-align: center;
