@@ -51,6 +51,7 @@ export const Inspector: React.FC = () => {
   const duplicateClip = useStore((s) => s.duplicateClip);
   const splitAtPlayhead = useStore((s) => s.splitAtPlayhead);
   const addAnimation = useStore((s) => s.addAnimation);
+  const addMatchingZoomOut = useStore((s) => s.addMatchingZoomOut);
   const removeAnimation = useStore((s) => s.removeAnimation);
   const updateAnimationParam = useStore((s) => s.updateAnimationParam);
   const addEffect = useStore((s) => s.addEffect);
@@ -315,6 +316,17 @@ export const Inspector: React.FC = () => {
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Matching zoom-out for an existing area zoom-in */}
+      {clip.kind !== "audio" && clip.animations.some((a) => a.type === "zoomPush") && (
+        <div className="section">
+          <h3>영역 줌 아웃</h3>
+          <p className="hint">이 클립의 줌인과 똑같은 영역·세기로, 클립 끝에서 자연스럽게 다시 줌아웃됩니다. (영역을 기억할 필요 없이 자동)</p>
+          <button className="primary" style={{ width: "100%" }} onClick={() => addMatchingZoomOut(clip.id)}>
+            ↩ 같은 영역으로 줌아웃 추가
+          </button>
         </div>
       )}
 

@@ -51,7 +51,7 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
   const project = useStore((s) => s.project);
   const ppf = useStore((s) => s.pixelsPerFrame);
   const setPpf = useStore((s) => s.setPixelsPerFrame);
-  const selectedClipId = useStore((s) => s.selectedClipId);
+  const selectedClipIds = useStore((s) => s.selectedClipIds);
   const selectClip = useStore((s) => s.selectClip);
   const moveClipStart = useStore((s) => s.moveClipStart);
   const resizeClip = useStore((s) => s.resizeClip);
@@ -114,8 +114,20 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
     mode: "move" | "left" | "right",
   ) => {
     e.stopPropagation();
-    selectClip(clip.id);
+    // Ctrl/⌘-click toggles the clip in/out of the multi-selection (no drag).
+    if (mode === "move" && (e.ctrlKey || e.metaKey)) {
+      selectClip(clip.id, true);
+      return;
+    }
+    // Drag the whole group if this clip is part of a multi-selection; else select it alone.
+    const currentIds = useStore.getState().selectedClipIds;
+    const group = mode === "move" && currentIds.includes(clip.id) && currentIds.length > 1 ? currentIds : [clip.id];
+    if (!currentIds.includes(clip.id)) selectClip(clip.id);
+
     const startX = e.clientX;
+    const allClips = useStore.getState().project.clips;
+    const origStarts = new Map(group.map((id) => [id, allClips.find((c) => c.id === id)?.start ?? 0]));
+    const minOrig = Math.min(...origStarts.values());
     const origStart = clip.start;
     const origDur = clip.duration;
     const origTrim = clip.kind === "video" || clip.kind === "audio" ? (clip as VideoClip | AudioClip).trimStart : 0;
@@ -123,9 +135,10 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
       clip.kind === "video" || clip.kind === "audio" ? (clip as VideoClip | AudioClip).naturalDurationInFrames : Infinity;
 
     const onMove = (me: MouseEvent) => {
-      const df = Math.round((me.clientX - startX) / ppf);
+      let df = Math.round((me.clientX - startX) / ppf);
       if (mode === "move") {
-        moveClipStart(clip.id, origStart + df);
+        df = Math.max(df, -minOrig); // keep the group together (leftmost can't go below 0)
+        for (const id of group) moveClipStart(id, (origStarts.get(id) ?? 0) + df);
       } else if (mode === "right") {
         let newDur = Math.max(1, origDur + df);
         if (isFinite(natural)) newDur = Math.min(newDur, natural - origTrim);
@@ -189,7 +202,7 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
       <div className="timeline-resize-handle" onMouseDown={startResize} />
       <div className="timeline-head">
         <strong style={{ fontSize: 12 }}>타임라인</strong>
-        <span className="muted">컷편집: 클립 선택 후 상단 ✂ 분할 / Del 삭제</span>
+        <span className="muted">컷편집: ✂ 분할 / Del 삭제 · Ctrl(⌘)+클릭 다중선택 → 드래그로 함께 이동, 🔗 합치기</span>
         <div style={{ flex: 1 }} />
         <span className="muted">줌</span>
         <input
@@ -219,7 +232,7 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
                   return (
                     <React.Fragment key={clip.id}>
                       <div
-                        className={"clip" + (clip.id === selectedClipId ? " selected" : "")}
+                        className={"clip" + (selectedClipIds.includes(clip.id) ? " selected" : "")}
                         style={{ left, width, top: ROW_TOP, height: CLIP_H, background: clipColor(clip.kind) }}
                         onMouseDown={(e) => startDrag(e, clip, "move")}
                         title={clip.name}

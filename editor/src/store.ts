@@ -41,7 +41,8 @@ export type ToolMode = "select" | "region";
 
 type State = {
   project: Project;
-  selectedClipId: string | null;
+  selectedClipId: string | null; // "primary" selection (drives the Inspector)
+  selectedClipIds: string[]; // full multi-selection (Ctrl/⌘-click)
   currentFrame: number;
   isPlaying: boolean;
   tool: ToolMode;
@@ -52,7 +53,7 @@ type State = {
   // playback / selection
   setCurrentFrame: (f: number) => void;
   setPlaying: (p: boolean) => void;
-  selectClip: (id: string | null) => void;
+  selectClip: (id: string | null, additive?: boolean) => void;
   setTool: (t: ToolMode) => void;
   setPixelsPerFrame: (p: number) => void;
   setPendingRegion: (r: Rect | null) => void;
@@ -72,11 +73,17 @@ type State = {
   removeClip: (id: string) => void;
   duplicateClip: (id: string) => void;
   splitAtPlayhead: () => string | null;
+  // Merge contiguous same-track clips back into one (undo a split). Keeps the
+  // leftmost clip and unions every piece's animations/effects onto it.
+  mergeClips: (ids: string[]) => void;
   moveClipStart: (id: string, start: number) => void;
   resizeClip: (id: string, edge: "start" | "end", newStart: number, newDuration: number, newTrimStart?: number) => void;
 
   // animations
   addAnimation: (clipId: string, type: string, paramOverrides?: Record<string, ParamValue>) => void;
+  // Mirror a clip's area zoom-in (zoomPush) with a matching zoom-out at its tail,
+  // reusing the same region/strength so it returns to normal naturally.
+  addMatchingZoomOut: (clipId: string) => void;
   removeAnimation: (clipId: string, animId: string) => void;
   updateAnimationParam: (clipId: string, animId: string, key: string, value: ParamValue) => void;
 
@@ -136,6 +143,7 @@ export const useStore = create<State>((set, get) => {
   return {
     project: initialProject(),
     selectedClipId: null,
+    selectedClipIds: [],
     currentFrame: 0,
     isPlaying: false,
     tool: "select",
@@ -144,7 +152,16 @@ export const useStore = create<State>((set, get) => {
 
     setCurrentFrame: (f) => set({ currentFrame: Math.max(0, f) }),
     setPlaying: (p) => set({ isPlaying: p }),
-    selectClip: (id) => set({ selectedClipId: id }),
+    selectClip: (id, additive) =>
+      set((s) => {
+        if (id === null) return { selectedClipId: null, selectedClipIds: [] };
+        if (additive) {
+          const has = s.selectedClipIds.includes(id);
+          const ids = has ? s.selectedClipIds.filter((x) => x !== id) : [...s.selectedClipIds, id];
+          return { selectedClipIds: ids, selectedClipId: has ? (ids[ids.length - 1] ?? null) : id };
+        }
+        return { selectedClipId: id, selectedClipIds: [id] };
+      }),
     setTool: (t) => set({ tool: t, pendingRegion: t === "select" ? null : get().pendingRegion }),
     setPixelsPerFrame: (p) => set({ pixelsPerFrame: Math.max(0.3, Math.min(40, p)) }),
     setPendingRegion: (r) => set({ pendingRegion: r }),
@@ -153,14 +170,14 @@ export const useStore = create<State>((set, get) => {
       // a full load isn't an undoable edit — clear history and don't record it
       suppressHistory = true;
       undoPast.length = 0;
-      set({ project, selectedClipId: null });
+      set({ project, selectedClipId: null, selectedClipIds: [] });
       suppressHistory = false;
     },
     undo: () => {
       const project = undoPast.pop();
       if (!project) return;
       suppressHistory = true;
-      set({ project, selectedClipId: null });
+      set({ project, selectedClipId: null, selectedClipIds: [] });
       suppressHistory = false;
     },
 
@@ -283,7 +300,11 @@ export const useStore = create<State>((set, get) => {
         // Drop the clip's now-empty track so no blank row lingers.
         project.tracks = project.tracks.filter((t) => project.clips.some((c) => c.trackId === t.id));
         project.durationInFrames = recalcDuration(project);
-        return { project, selectedClipId: s.selectedClipId === id ? null : s.selectedClipId };
+        return {
+          project,
+          selectedClipId: s.selectedClipId === id ? null : s.selectedClipId,
+          selectedClipIds: s.selectedClipIds.filter((x) => x !== id),
+        };
       }),
 
     duplicateClip: (id) =>
@@ -332,6 +353,31 @@ export const useStore = create<State>((set, get) => {
       return didSplit ? rightId : null;
     },
 
+    mergeClips: (ids) =>
+      set((s) => {
+        const project = structuredCloneProject(s.project);
+        const clips = ids
+          .map((id) => project.clips.find((c) => c.id === id))
+          .filter((c): c is Clip => !!c)
+          .sort((a, b) => a.start - b.start);
+        if (clips.length < 2) return {};
+        // only merge clips on the same track (row)
+        const trackId = clips[0].trackId;
+        if (!clips.every((c) => c.trackId === trackId)) return {};
+        const base = clips[0];
+        const end = Math.max(...clips.map((c) => c.start + c.duration));
+        base.duration = end - base.start;
+        // union every piece's overlays onto the base, dropping exact duplicates
+        // (split copies the same effect onto both halves with fresh ids).
+        base.animations = dedupOverlays(clips.flatMap((c) => c.animations));
+        base.effects = dedupOverlays(clips.flatMap((c) => c.effects));
+        const dropped = new Set(clips.slice(1).map((c) => c.id));
+        project.clips = project.clips.filter((c) => !dropped.has(c.id));
+        project.tracks = project.tracks.filter((t) => project.clips.some((c) => c.trackId === t.id));
+        project.durationInFrames = recalcDuration(project);
+        return { project, selectedClipId: base.id, selectedClipIds: [base.id] };
+      }),
+
     moveClipStart: (id, start) => mutateClip(id, (c) => (c.start = Math.max(0, Math.round(start)))),
 
     resizeClip: (id, _edge, newStart, newDuration, newTrimStart) =>
@@ -353,6 +399,33 @@ export const useStore = create<State>((set, get) => {
           params: { ...defaultParamsFor(def.params), ...paramOverrides },
           start: c.start,
           duration: c.duration,
+        });
+      }),
+
+    addMatchingZoomOut: (clipId) =>
+      mutateProject((p) => {
+        const c = p.clips.find((x) => x.id === clipId);
+        if (!c) return;
+        // mirror the most recent area zoom-in on this clip
+        const push = [...c.animations].reverse().find((a) => a.type === "zoomPush");
+        if (!push) return;
+        const numOf = (k: string, d: number) => (typeof push.params[k] === "number" ? (push.params[k] as number) : d);
+        const to = numOf("to", 2);
+        const toX = numOf("toX", 0);
+        const toY = numOf("toY", 0);
+        const popSecs = numOf("duration", 1.0);
+        // zoom-out takes the clip tail (at most half, leaving room for the zoom-in + hold)
+        const popFrames = Math.max(1, Math.min(Math.round(popSecs * p.fps), Math.floor(c.duration / 2)));
+        const popStart = c.start + c.duration - popFrames;
+        // end the zoom-in's hold exactly where the zoom-out starts so they don't stack
+        const pushStart = push.start ?? c.start;
+        push.duration = Math.max(1, popStart - pushStart);
+        c.animations.push({
+          id: uid(),
+          type: "zoomPop",
+          params: { to, toX, toY, duration: popSecs },
+          start: popStart,
+          duration: popFrames,
         });
       }),
 
@@ -413,6 +486,19 @@ export const useStore = create<State>((set, get) => {
 // structuredClone fails on nothing here (all plain data), but keep a helper for clarity.
 function structuredCloneProject(p: Project): Project {
   return structuredClone(p);
+}
+
+// Drop overlays that are identical in type+params+region (the duplicate copies a
+// split leaves on both halves), keeping the first. Used when merging clips.
+function dedupOverlays<T extends AnimationInstance | EffectInstance>(arr: T[]): T[] {
+  const seen = new Set<string>();
+  return arr.filter((o) => {
+    const region = "region" in o ? (o as EffectInstance).region : null;
+    const key = `${o.type}|${JSON.stringify(o.params)}|${JSON.stringify(region ?? null)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 // Record undo history: push the previous project before each change. Rapid bursts

@@ -175,6 +175,33 @@ export const animationRegistry: Record<string, AnimationDef> = {
       };
     },
   },
+  zoomPop: {
+    type: "zoomPop",
+    label: "영역 줌아웃 (자동 삽입)",
+    category: "emphasis",
+    params: [
+      { key: "to", label: "배율", type: "number", default: 2, min: 1.1, max: 4, step: 0.05 },
+      { key: "toX", label: "X 이동(px)", type: "number", default: 0, min: -2000, max: 2000, step: 1 },
+      { key: "toY", label: "Y 이동(px)", type: "number", default: 0, min: -2000, max: 2000, step: 1 },
+      { key: "duration", label: "줌아웃 길이(초)", type: "number", default: 1.0, min: 0.2, max: 5, step: 0.1 },
+    ],
+    // Mirror of zoomPush: starts at the zoomed-in framing (to / toX / toY) and
+    // eases back to the normal full-frame view. Pair it at the clip tail to undo
+    // an area zoom-in with the exact same region and strength.
+    apply: ({ frame, fps, params }) => {
+      const to = num(params, "to", 2);
+      const toX = num(params, "toX", 0);
+      const toY = num(params, "toY", 0);
+      const endFrame = Math.max(1, num(params, "duration", 1.0) * fps);
+      const ease = Easing.bezier(0.16, 1, 0.3, 1);
+      const opts = { extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const, easing: ease };
+      return {
+        scale: interpolate(frame, [0, endFrame], [to, 1], opts),
+        translateX: interpolate(frame, [0, endFrame], [toX, 0], opts),
+        translateY: interpolate(frame, [0, endFrame], [toY, 0], opts),
+      };
+    },
+  },
   zoomOut: {
     type: "zoomOut",
     label: "줌 아웃 (Ken Burns)",

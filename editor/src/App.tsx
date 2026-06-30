@@ -22,7 +22,9 @@ export const App: React.FC = () => {
   const currentFrame = useStore((s) => s.currentFrame);
   const isPlaying = useStore((s) => s.isPlaying);
   const splitAtPlayhead = useStore((s) => s.splitAtPlayhead);
+  const mergeClips = useStore((s) => s.mergeClips);
   const selectedClipId = useStore((s) => s.selectedClipId);
+  const selectedClipIds = useStore((s) => s.selectedClipIds);
   const removeClip = useStore((s) => s.removeClip);
   const setCurrentFrame = useStore((s) => s.setCurrentFrame);
   const replaceProject = useStore((s) => s.replaceProject);
@@ -73,7 +75,8 @@ export const App: React.FC = () => {
       } else if (e.key === "s" || e.key === "S") {
         splitAtPlayhead();
       } else if (e.key === "Delete" || e.key === "Backspace") {
-        if (selectedClipId) removeClip(selectedClipId);
+        const ids = useStore.getState().selectedClipIds;
+        (ids.length ? ids : selectedClipId ? [selectedClipId] : []).forEach((id) => removeClip(id));
       } else if (e.key === "ArrowLeft") {
         seek(currentFrame - (e.shiftKey ? project.fps : 1));
       } else if (e.key === "ArrowRight") {
@@ -126,7 +129,14 @@ export const App: React.FC = () => {
             <button onClick={splitAtPlayhead} title="플레이헤드에서 분할 (S)">
               ✂ 분할
             </button>
-            <button className="danger" disabled={!selectedClipId} onClick={() => selectedClipId && removeClip(selectedClipId)}>
+            <button
+              disabled={selectedClipIds.length < 2}
+              onClick={() => mergeClips(selectedClipIds)}
+              title="선택한 분할 클립들을 하나로 합치기 (같은 트랙). Ctrl/⌘+클릭으로 여러 클립 선택"
+            >
+              🔗 합치기
+            </button>
+            <button className="danger" disabled={selectedClipIds.length === 0} onClick={() => selectedClipIds.forEach((id) => removeClip(id))}>
               🗑 삭제
             </button>
             <div className="spacer" style={{ flex: 1 }} />
