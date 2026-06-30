@@ -44,7 +44,10 @@ export async function getAsset(id: string): Promise<Blob | undefined> {
   }
 }
 
-export function saveProject(project: Project): void {
+export function saveProject(project: Project, force = false): void {
+  // Don't let an auto-save clobber a real saved project with an empty one — e.g. when
+  // a dev HMR reset momentarily empties the store. The manual Save button passes force.
+  if (!force && project.clips.length === 0) return;
   try {
     localStorage.setItem(PROJECT_KEY, JSON.stringify(project));
   } catch {

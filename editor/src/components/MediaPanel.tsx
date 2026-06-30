@@ -1,17 +1,37 @@
-import React from "react";
+import React, { useState } from "react";
 import { useStore } from "../store";
 import { loadVideoMeta, loadImageMeta, loadAudioMeta, guessKind } from "../lib/media";
-import { putAsset } from "../lib/persist";
+import { putAsset, saveProject, loadProject } from "../lib/persist";
 
 const newAssetId = () => Math.random().toString(36).slice(2, 12);
 
 export const MediaPanel: React.FC = () => {
   const project = useStore((s) => s.project);
+  const replaceProject = useStore((s) => s.replaceProject);
   const addVideoClip = useStore((s) => s.addVideoClip);
   const addImageClip = useStore((s) => s.addImageClip);
   const addAudioClip = useStore((s) => s.addAudioClip);
   const addTextClip = useStore((s) => s.addTextClip);
   const addShapeClip = useStore((s) => s.addShapeClip);
+  const [projectMsg, setProjectMsg] = useState("");
+
+  const flash = (m: string) => {
+    setProjectMsg(m);
+    window.setTimeout(() => setProjectMsg(""), 2000);
+  };
+  const onSaveProject = () => {
+    saveProject(project, true);
+    flash("저장됨 ✓");
+  };
+  const onLoadProject = async () => {
+    const p = await loadProject();
+    if (p) {
+      replaceProject(p);
+      flash("불러옴 ✓");
+    } else {
+      flash("저장된 프로젝트가 없습니다");
+    }
+  };
   const setProjectMeta = useStore((s) => s.setProjectMeta);
 
   const onFiles = async (files: FileList | null) => {
@@ -76,6 +96,19 @@ export const MediaPanel: React.FC = () => {
 
   return (
     <div className="col">
+      <div className="section">
+        <h3>프로젝트</h3>
+        <div className="grid2">
+          <button className="primary" onClick={onSaveProject}>💾 저장</button>
+          <button onClick={onLoadProject}>📂 불러오기</button>
+        </div>
+        {projectMsg ? (
+          <p className="hint">{projectMsg}</p>
+        ) : (
+          <p className="hint">자동 저장됩니다. 코드 수정/새로고침 전에 💾 저장으로 확실히 보관하세요.</p>
+        )}
+      </div>
+
       <div className="section">
         <h3>미디어 추가</h3>
         <button className="primary" style={{ width: "100%", marginBottom: 8 }} onClick={openFilePicker}>
