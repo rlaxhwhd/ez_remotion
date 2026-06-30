@@ -127,7 +127,9 @@ export const MediaPanel: React.FC = () => {
         <div className="row wrap" style={{ marginTop: 4 }}>
           {[
             { l: "16:9 (1280×720)", w: 1280, h: 720 },
+            { l: "16:9 1080p (1920×1080)", w: 1920, h: 1080 },
             { l: "9:16 (720×1280)", w: 720, h: 1280 },
+            { l: "9:16 1080p (1080×1920)", w: 1080, h: 1920 },
             { l: "1:1 (1080)", w: 1080, h: 1080 },
           ].map((p) => (
             <button key={p.l} onClick={() => setProjectMeta({ width: p.w, height: p.h })}>
