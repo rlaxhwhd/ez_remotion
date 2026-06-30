@@ -42,14 +42,15 @@ const transitionStyle = (
   }
 };
 
-const InnerContent: React.FC<{ clip: Clip }> = ({ clip }) => {
+// `silent` forces audio off — used by the glow layer (a muted duplicate copy).
+const InnerContent: React.FC<{ clip: Clip; silent?: boolean }> = ({ clip, silent }) => {
   switch (clip.kind) {
     case "video":
       return (
         <Video
           src={clip.src}
           startFrom={clip.trimStart}
-          volume={clip.muted ? 0 : clip.volume}
+          volume={silent || clip.muted ? 0 : clip.volume}
           playbackRate={clip.playbackRate}
           style={{ width: "100%", height: "100%", objectFit: "contain" }}
           acceptableTimeShiftInSeconds={999}
@@ -62,7 +63,7 @@ const InnerContent: React.FC<{ clip: Clip }> = ({ clip }) => {
         <Audio
           src={clip.src}
           startFrom={clip.trimStart}
-          volume={clip.muted ? 0 : clip.volume}
+          volume={silent || clip.muted ? 0 : clip.volume}
           acceptableTimeShiftInSeconds={999}
         />
       );
@@ -153,6 +154,30 @@ export const ClipRenderer: React.FC<{ clip: Clip }> = ({ clip }) => {
   const transform =
     `translate(${translateX}px, ${translateY}px) scale(${scale}) rotate(${rotate}deg) ${trans.extraTransform}`.trim();
 
+  // Glow (bloom): a blurred, brightened copy of the clip screen-blended on top.
+  // CSS-only so it doesn't reintroduce the WebGL-decoder playback stutter.
+  const glow = clip.effects.find((e) => e.type === "glow");
+  const glowLayer = glow
+    ? (() => {
+        const p = glow.params;
+        const radius = typeof p.radius === "number" ? p.radius : 10;
+        const intensity = typeof p.intensity === "number" ? p.intensity : 1;
+        const threshold = typeof p.threshold === "number" ? p.threshold : 0.5;
+        return (
+          <AbsoluteFill
+            style={{
+              mixBlendMode: "screen",
+              // higher threshold → more contrast so only the brightest areas bloom
+              filter: `blur(${radius}px) brightness(${1 + intensity}) contrast(${1 + threshold * 3})`,
+              pointerEvents: "none",
+            }}
+          >
+            <InnerContent clip={clip} silent />
+          </AbsoluteFill>
+        );
+      })()
+    : null;
+
   // Region overlay layers (selection-area tool, CSS-masked to a rect).
   const regionLayers = clip.effects
     .map((e) => {
@@ -184,6 +209,7 @@ export const ClipRenderer: React.FC<{ clip: Clip }> = ({ clip }) => {
       }}
     >
       <InnerContent clip={clip} />
+      {glowLayer}
       {regionLayers}
     </AbsoluteFill>
   );
