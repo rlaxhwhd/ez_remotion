@@ -9,6 +9,13 @@ const keywordMap: { keys: string[]; type: string }[] = [
   { keys: ["강조", "하이라이트", "박스", "highlight"], type: "highlight" },
   { keys: ["밝", "bright"], type: "regionBrighten" },
   { keys: ["흑백", "그레이", "gray", "grey"], type: "regionGrayscale" },
+  { keys: ["비네트", "vignette"], type: "regionVignette" },
+  { keys: ["글로우", "발광", "glow"], type: "regionGlow" },
+  { keys: ["대비", "contrast"], type: "regionContrast" },
+  { keys: ["채도", "saturat"], type: "regionSaturate" },
+  { keys: ["색조", "hue"], type: "regionHue" },
+  { keys: ["반전", "invert"], type: "regionInvert" },
+  { keys: ["스캔", "scanline", "scan"], type: "regionScanlines" },
   { keys: ["색", "틴트", "tint", "color"], type: "regionTint" },
 ];
 
