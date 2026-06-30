@@ -46,30 +46,21 @@ const transitionStyle = (
 };
 
 // `silent` forces audio off — used by the glow layer (a muted duplicate copy).
-// `playing` is the Player play-state: loose video time tolerance while playing
-// (smooth), tight when paused so the picture lands on the exact frame.
-const InnerContent: React.FC<{ clip: Clip; silent?: boolean; playing?: boolean }> = ({ clip, silent, playing }) => {
+const InnerContent: React.FC<{ clip: Clip; silent?: boolean }> = ({ clip, silent }) => {
   switch (clip.kind) {
     case "video": {
       const style: React.CSSProperties = { width: "100%", height: "100%", objectFit: "contain" };
       const vol = silent || clip.muted ? 0 : clip.volume;
       // Server render: OffthreadVideo (ffmpeg) — headless Chromium can't reliably
       // decode/seek H.264 via an HTML5 <video>, which times out delayRender.
-      // Live Player: <Video> for smooth playback.
+      // Live Player: <Video> with Remotion's default time tolerance — it deliberately
+      // doesn't re-seek on small drift while playing (smooth), seeks to within ~1 frame
+      // when paused (frame-exact), and re-syncs big drift / stalls (>0.45s). Overriding
+      // it caused either stutter (too tight) or freeze/drift (too loose).
       return getRemotionEnvironment().isRendering ? (
         <OffthreadVideo src={clip.src} startFrom={clip.trimStart} volume={vol} playbackRate={clip.playbackRate} style={style} />
       ) : (
-        <Video
-          src={clip.src}
-          startFrom={clip.trimStart}
-          volume={vol}
-          playbackRate={clip.playbackRate}
-          style={style}
-          // While playing keep some tolerance for smoothness, but small enough that a
-          // stalled video (e.g. after rapid play/pause) gets re-synced instead of
-          // freezing while the timeline runs. Tight when paused for a frame-exact picture.
-          acceptableTimeShiftInSeconds={playing ? 0.3 : 0.03}
-        />
+        <Video src={clip.src} startFrom={clip.trimStart} volume={vol} playbackRate={clip.playbackRate} style={style} />
       );
     }
     case "image":
@@ -104,13 +95,13 @@ const InnerContent: React.FC<{ clip: Clip; silent?: boolean; playing?: boolean }
   }
 };
 
-export const ClipRenderer: React.FC<{ clip: Clip; playing?: boolean }> = ({ clip, playing }) => {
+export const ClipRenderer: React.FC<{ clip: Clip }> = ({ clip }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
 
   if (clip.kind === "audio") {
     // Audio has no visual layer or transform.
-    return <InnerContent clip={clip} playing={playing} />;
+    return <InnerContent clip={clip} />;
   }
 
   // Absolute timeline frame, and whether an overlay's own [start,duration] window
@@ -178,7 +169,7 @@ export const ClipRenderer: React.FC<{ clip: Clip; playing?: boolean }> = ({ clip
               pointerEvents: "none",
             }}
           >
-            <InnerContent clip={clip} silent playing={playing} />
+            <InnerContent clip={clip} silent />
           </AbsoluteFill>
         );
       })()
@@ -214,7 +205,7 @@ export const ClipRenderer: React.FC<{ clip: Clip; playing?: boolean }> = ({ clip
         clipPath: trans.clipPath,
       }}
     >
-      <InnerContent clip={clip} playing={playing} />
+      <InnerContent clip={clip} />
       {glowLayer}
       {regionLayers}
     </AbsoluteFill>

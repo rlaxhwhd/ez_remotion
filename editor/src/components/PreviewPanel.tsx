@@ -11,7 +11,6 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
   const setPendingRegion = useStore((s) => s.setPendingRegion);
   const setCurrentFrame = useStore((s) => s.setCurrentFrame);
   const setPlaying = useStore((s) => s.setPlaying);
-  const isPlaying = useStore((s) => s.isPlaying);
   const selClip = useStore(selectedClip);
   const updateClip = useStore((s) => s.updateClip);
 
@@ -50,11 +49,25 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
   useEffect(() => {
     const ref = playerRef.current;
     if (!ref) return;
+    let lastStoreUpdate = 0;
     const onFrame = (e: { detail: { frame: number } }) => {
       const f = e.detail.frame;
-      // Throttle to every 3rd frame during playback — reduces React re-render overhead
-      // that would otherwise cause the video to drift ahead of Remotion's frame counter.
-      if (!isPlayingRef.current || f % 3 === 0) setCurrentFrame(f);
+      if (!isPlayingRef.current) {
+        setCurrentFrame(f);
+        return;
+      }
+      // During playback, move the timeline playhead by writing its left directly (cheap)
+      // every frame, and only update the store a couple of times a second. Re-rendering
+      // the (heavy) timeline on every frame steals main-thread time from the player, which
+      // slows its clock so the video races ahead and gets yanked back — the stutter.
+      // 110 mirrors Timeline's LABEL_W; store currentFrame is reconciled on pause.
+      const ph = document.querySelector<HTMLElement>(".playhead");
+      if (ph) ph.style.left = `${110 + f * useStore.getState().pixelsPerFrame}px`;
+      const now = performance.now();
+      if (now - lastStoreUpdate >= 500) {
+        lastStoreUpdate = now;
+        setCurrentFrame(f);
+      }
     };
     const onPlay = () => { isPlayingRef.current = true; setPlaying(true); };
     const onPause = () => {
@@ -152,7 +165,7 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
         <Player
           ref={playerRef}
           component={VideoComposition}
-          inputProps={{ project, playing: isPlaying }}
+          inputProps={{ project }}
           durationInFrames={Math.max(1, project.durationInFrames)}
           compositionWidth={project.width}
           compositionHeight={project.height}
