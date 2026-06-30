@@ -4,6 +4,19 @@ import { getAsset } from "./persist";
 
 const RENDER_BASE = "http://localhost:5280";
 
+const SERVER_DOWN_MSG =
+  "렌더 서버가 꺼져 있습니다. 터미널에서 `cd editor && npm run server`를 실행한 뒤 다시 시도하세요. (또는 `npm run dev:all`로 에디터+서버를 함께 실행)";
+
+// Fail fast with a clear message if the render server isn't reachable.
+// Any HTTP response (even 404) means it's running; only a connection error is "down".
+async function ensureServerUp(): Promise<void> {
+  try {
+    await fetch(`${RENDER_BASE}/health`, { method: "GET" });
+  } catch {
+    throw new Error(SERVER_DOWN_MSG);
+  }
+}
+
 const extFromType = (type: string): string => {
   if (type.includes("mp4")) return "mp4";
   if (type.includes("webm")) return "webm";
@@ -18,6 +31,9 @@ const extFromType = (type: string): string => {
 };
 
 export async function exportProject(project: Project, onStatus: (msg: string) => void): Promise<void> {
+  onStatus("렌더 서버 확인 중…");
+  await ensureServerUp();
+
   // 1. Upload each uploaded media file to the render server and rewrite its src
   //    to a URL the headless renderer can fetch (blob: URLs only exist in this tab).
   const out: Project = structuredClone(project);
@@ -33,7 +49,12 @@ export async function exportProject(project: Project, onStatus: (msg: string) =>
       i += 1;
       onStatus(`미디어 업로드 ${i}/${uploaded.size + 1}…`);
       const ext = extFromType(blob.type);
-      const resp = await fetch(`${RENDER_BASE}/upload?id=${assetId}&ext=${ext}`, { method: "POST", body: blob });
+      let resp: Response;
+      try {
+        resp = await fetch(`${RENDER_BASE}/upload?id=${assetId}&ext=${ext}`, { method: "POST", body: blob });
+      } catch {
+        throw new Error(SERVER_DOWN_MSG);
+      }
       if (!resp.ok) throw new Error("미디어 업로드 실패");
       url = (await resp.json()).url as string;
       uploaded.set(assetId, url);
@@ -51,7 +72,7 @@ export async function exportProject(project: Project, onStatus: (msg: string) =>
       body: JSON.stringify(out),
     });
   } catch {
-    throw new Error("렌더 서버에 연결할 수 없습니다. 터미널에서 `npm run server`를 실행하세요.");
+    throw new Error(SERVER_DOWN_MSG);
   }
   if (!resp.ok) {
     const t = await resp.text();

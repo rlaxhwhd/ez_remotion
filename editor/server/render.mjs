@@ -42,6 +42,13 @@ const server = http.createServer(async (req, res) => {
   }
   const url = new URL(req.url, `http://localhost:${PORT}`);
 
+  // health check — the browser pings this before exporting
+  if (req.method === "GET" && url.pathname === "/health") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+
   // serve an uploaded asset to the headless renderer
   if (req.method === "GET" && url.pathname.startsWith("/assets/")) {
     const file = path.join(ASSETS_DIR, path.basename(url.pathname));
