@@ -9,13 +9,19 @@ const styleFor = (
   baseColor: string,
   accent: string,
   frame: number,
+  neonIntensity: number,
 ): { css: React.CSSProperties; fill: string } => {
   switch (style) {
-    case "neon":
+    case "neon": {
+      const k = Math.max(0.1, neonIntensity);
       return {
-        css: { color: accent, textShadow: `0 0 2px #fff, 0 0 8px ${accent}, 0 0 16px ${accent}, 0 0 32px ${accent}` },
+        css: {
+          color: accent,
+          textShadow: `0 0 2px #fff, 0 0 ${8 * k}px ${accent}, 0 0 ${16 * k}px ${accent}, 0 0 ${32 * k}px ${accent}`,
+        },
         fill: accent,
       };
+    }
     case "glitch": {
       const dx = 2 + Math.sin(frame * 0.8) * 2;
       return { css: { color: baseColor, textShadow: `${dx}px 0 #ff00c1, ${-dx}px 0 #00fff9` }, fill: baseColor };
@@ -50,7 +56,7 @@ export const TextClipRenderer: React.FC<{ clip: TextClip }> = ({ clip }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const accent = clip.styleColor || clip.color;
-  const { css, fill } = styleFor(clip.textStyle ?? "none", clip.color, accent, frame);
+  const { css, fill } = styleFor(clip.textStyle ?? "none", clip.color, accent, frame, clip.neonIntensity ?? 1);
 
   // ── Curved / arch text (SVG textPath) ─────────────────────────────────────
   if (clip.curve && Math.abs(clip.curve) > 0.001) {

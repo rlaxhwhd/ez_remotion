@@ -96,6 +96,7 @@ export type TextClip = ClipBase & {
   background: string; // "transparent" or rgba
   textStyle?: TextStyle; // CSS look preset (neon/glitch/3d/metal/outline)
   styleColor?: string; // accent colour for the preset (glow/stroke/gradient)
+  neonIntensity?: number; // neon glow strength (default 1)
   curve?: number; // -1..1 arch curvature; 0 = straight (SVG textPath)
   karaoke?: boolean; // sweep a highlight colour across the text over time
   karaokeColor?: string;

@@ -443,6 +443,19 @@ const ClipSpecificProps: React.FC<{ clip: Clip; updateClip: (id: string, patch: 
             <input type="color" value={clip.styleColor ?? clip.color} onChange={(e) => updateClip(clip.id, { styleColor: e.target.value })} />
           </div>
         )}
+        {clip.textStyle === "neon" && (
+          <div className="field">
+            <label>네온 강도 · {(clip.neonIntensity ?? 1).toFixed(1)}</label>
+            <input
+              type="range"
+              min={0.2}
+              max={3}
+              step={0.1}
+              value={clip.neonIntensity ?? 1}
+              onChange={(e) => updateClip(clip.id, { neonIntensity: Number(e.target.value) })}
+            />
+          </div>
+        )}
         <div className="field">
           <label>곡률 · 아치 · {(clip.curve ?? 0).toFixed(2)}</label>
           <input type="range" min={-1} max={1} step={0.05} value={clip.curve ?? 0} onChange={(e) => updateClip(clip.id, { curve: Number(e.target.value) })} />
