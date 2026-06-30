@@ -9,9 +9,9 @@ const LABEL_W = 110;
 // Vertical layout of a track row: the clip on top, then one mini "sub-clip" bar
 // per attached animation / effect stacked beneath it.
 const ROW_TOP = 5;
-const CLIP_H = 38;
-const SUB_H = 16;
-const SUB_GAP = 3;
+const CLIP_H = 32;
+const SUB_H = 26;
+const SUB_GAP = 4;
 const ROW_BOTTOM = 6;
 
 type Badge = { id: string; label: string; cls: "anim" | "effect"; start: number; duration: number };
