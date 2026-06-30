@@ -94,6 +94,9 @@ type State = {
 
   // independent timing of an animation/effect ("overlay") on the timeline
   setOverlayTiming: (clipId: string, cls: "anim" | "effect", id: string, start: number, duration: number) => void;
+
+  // track z-order: "up" = move toward front of array = renders on top
+  moveTrack: (trackId: string, dir: "up" | "down") => void;
 };
 
 const recalcDuration = (project: Project): number => {
@@ -480,6 +483,15 @@ export const useStore = create<State>((set, get) => {
           item.start = s;
           item.duration = d;
         }
+      }),
+
+    moveTrack: (trackId, dir) =>
+      mutateProject((p) => {
+        const i = p.tracks.findIndex((t) => t.id === trackId);
+        if (i === -1) return;
+        const j = dir === "up" ? i - 1 : i + 1;
+        if (j < 0 || j >= p.tracks.length) return;
+        [p.tracks[i], p.tracks[j]] = [p.tracks[j], p.tracks[i]];
       }),
   };
 });

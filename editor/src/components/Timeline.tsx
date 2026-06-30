@@ -56,6 +56,7 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
   const moveClipStart = useStore((s) => s.moveClipStart);
   const resizeClip = useStore((s) => s.resizeClip);
   const setOverlayTiming = useStore((s) => s.setOverlayTiming);
+  const moveTrack = useStore((s) => s.moveTrack);
   const currentFrame = useStore((s) => s.currentFrame);
   const setCurrentFrame = useStore((s) => s.setCurrentFrame);
 
@@ -221,9 +222,27 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
             {ticks}
           </div>
 
-          {project.tracks.map((track) => (
+          {project.tracks.map((track, tIdx) => (
             <div key={track.id} className="track-row" style={{ height: trackHeight(track) }}>
-              <div className="track-label">{track.name}</div>
+              <div className="track-label">
+                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>{track.name}</span>
+                <div className="track-order-btns">
+                  <button
+                    className="track-order-btn"
+                    title="앞으로 (위 레이어)"
+                    disabled={tIdx === 0}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => { e.stopPropagation(); moveTrack(track.id, "up"); }}
+                  >▲</button>
+                  <button
+                    className="track-order-btn"
+                    title="뒤로 (아래 레이어)"
+                    disabled={tIdx === project.tracks.length - 1}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => { e.stopPropagation(); moveTrack(track.id, "down"); }}
+                  >▼</button>
+                </div>
+              </div>
               {project.clips
                 .filter((c) => c.trackId === track.id)
                 .map((clip) => {
