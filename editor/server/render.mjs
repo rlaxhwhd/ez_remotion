@@ -49,7 +49,8 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // serve an uploaded asset to the headless renderer
+  // serve an uploaded asset to the headless renderer (with Range support — the
+  // video decoder issues partial requests and expects 206 responses)
   if (req.method === "GET" && url.pathname.startsWith("/assets/")) {
     const file = path.join(ASSETS_DIR, path.basename(url.pathname));
     if (!fs.existsSync(file)) {
@@ -57,8 +58,31 @@ const server = http.createServer(async (req, res) => {
       res.end();
       return;
     }
-    res.writeHead(200, { "Content-Type": contentTypeForExt(file.split(".").pop()) });
-    fs.createReadStream(file).pipe(res);
+    const stat = fs.statSync(file);
+    const type = contentTypeForExt(file.split(".").pop());
+    const range = req.headers.range;
+    if (range) {
+      const m = /bytes=(\d*)-(\d*)/.exec(range);
+      let start = m && m[1] ? parseInt(m[1], 10) : 0;
+      let end = m && m[2] ? parseInt(m[2], 10) : stat.size - 1;
+      if (Number.isNaN(start)) start = 0;
+      if (Number.isNaN(end) || end >= stat.size) end = stat.size - 1;
+      if (start > end) {
+        res.writeHead(416, { "Content-Range": `bytes */${stat.size}` });
+        res.end();
+        return;
+      }
+      res.writeHead(206, {
+        "Content-Type": type,
+        "Content-Range": `bytes ${start}-${end}/${stat.size}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": end - start + 1,
+      });
+      fs.createReadStream(file, { start, end }).pipe(res);
+    } else {
+      res.writeHead(200, { "Content-Type": type, "Content-Length": stat.size, "Accept-Ranges": "bytes" });
+      fs.createReadStream(file).pipe(res);
+    }
     return;
   }
 

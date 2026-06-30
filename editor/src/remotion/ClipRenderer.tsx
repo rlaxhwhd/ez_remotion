@@ -3,11 +3,13 @@ import {
   AbsoluteFill,
   Img,
   Video,
+  OffthreadVideo,
   Audio,
   useCurrentFrame,
   useVideoConfig,
   interpolate,
   Easing,
+  getRemotionEnvironment,
 } from "remotion";
 import { Rect as ShapeRect, Circle, Triangle, Star, Ellipse } from "@remotion/shapes";
 import type { Clip } from "../types";
@@ -46,17 +48,25 @@ const transitionStyle = (
 // `silent` forces audio off — used by the glow layer (a muted duplicate copy).
 const InnerContent: React.FC<{ clip: Clip; silent?: boolean }> = ({ clip, silent }) => {
   switch (clip.kind) {
-    case "video":
-      return (
+    case "video": {
+      const style: React.CSSProperties = { width: "100%", height: "100%", objectFit: "contain" };
+      const vol = silent || clip.muted ? 0 : clip.volume;
+      // Server render: OffthreadVideo (ffmpeg) — headless Chromium can't reliably
+      // decode/seek H.264 via an HTML5 <video>, which times out delayRender.
+      // Live Player: <Video> for smooth playback.
+      return getRemotionEnvironment().isRendering ? (
+        <OffthreadVideo src={clip.src} startFrom={clip.trimStart} volume={vol} playbackRate={clip.playbackRate} style={style} />
+      ) : (
         <Video
           src={clip.src}
           startFrom={clip.trimStart}
-          volume={silent || clip.muted ? 0 : clip.volume}
+          volume={vol}
           playbackRate={clip.playbackRate}
-          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+          style={style}
           acceptableTimeShiftInSeconds={999}
         />
       );
+    }
     case "image":
       return <Img src={clip.src} style={{ width: "100%", height: "100%", objectFit: "contain" }} />;
     case "audio":
