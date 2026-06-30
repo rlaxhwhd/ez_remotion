@@ -46,7 +46,9 @@ const transitionStyle = (
 };
 
 // `silent` forces audio off — used by the glow layer (a muted duplicate copy).
-const InnerContent: React.FC<{ clip: Clip; silent?: boolean }> = ({ clip, silent }) => {
+// `playing` is the Player play-state: loose video time tolerance while playing
+// (smooth), tight when paused so the picture lands on the exact frame.
+const InnerContent: React.FC<{ clip: Clip; silent?: boolean; playing?: boolean }> = ({ clip, silent, playing }) => {
   switch (clip.kind) {
     case "video": {
       const style: React.CSSProperties = { width: "100%", height: "100%", objectFit: "contain" };
@@ -63,7 +65,8 @@ const InnerContent: React.FC<{ clip: Clip; silent?: boolean }> = ({ clip, silent
           volume={vol}
           playbackRate={clip.playbackRate}
           style={style}
-          acceptableTimeShiftInSeconds={999}
+          // loose while playing (no stutter), tight when paused (frame-exact picture)
+          acceptableTimeShiftInSeconds={playing ? 999 : 0.03}
         />
       );
     }
@@ -99,13 +102,13 @@ const InnerContent: React.FC<{ clip: Clip; silent?: boolean }> = ({ clip, silent
   }
 };
 
-export const ClipRenderer: React.FC<{ clip: Clip }> = ({ clip }) => {
+export const ClipRenderer: React.FC<{ clip: Clip; playing?: boolean }> = ({ clip, playing }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
 
   if (clip.kind === "audio") {
     // Audio has no visual layer or transform.
-    return <InnerContent clip={clip} />;
+    return <InnerContent clip={clip} playing={playing} />;
   }
 
   // Absolute timeline frame, and whether an overlay's own [start,duration] window
@@ -173,7 +176,7 @@ export const ClipRenderer: React.FC<{ clip: Clip }> = ({ clip }) => {
               pointerEvents: "none",
             }}
           >
-            <InnerContent clip={clip} silent />
+            <InnerContent clip={clip} silent playing={playing} />
           </AbsoluteFill>
         );
       })()
@@ -209,7 +212,7 @@ export const ClipRenderer: React.FC<{ clip: Clip }> = ({ clip }) => {
         clipPath: trans.clipPath,
       }}
     >
-      <InnerContent clip={clip} />
+      <InnerContent clip={clip} playing={playing} />
       {glowLayer}
       {regionLayers}
     </AbsoluteFill>

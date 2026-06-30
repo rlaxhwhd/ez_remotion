@@ -5,11 +5,14 @@ import { ClipRenderer } from "./ClipRenderer";
 
 export type VideoCompositionProps = {
   project: Project;
+  // true while the Player is playing — lets video clips use a loose time tolerance
+  // for smooth playback and a tight one when paused for a frame-exact picture.
+  playing?: boolean;
 };
 
 // Renders the whole project. Clips are placed on the timeline via <Sequence>.
 // Track order defines z-order: tracks lower in the list render on top.
-export const VideoComposition: React.FC<VideoCompositionProps> = ({ project }) => {
+export const VideoComposition: React.FC<VideoCompositionProps> = ({ project, playing }) => {
   const trackIndex = new Map(project.tracks.map((t, i) => [t.id, i]));
   const visibleClips = project.clips
     .filter((c) => {
@@ -35,7 +38,7 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({ project }) =
           durationInFrames={Math.max(1, clip.duration)}
           premountFor={premountFor}
         >
-          <ClipRenderer clip={clip} />
+          <ClipRenderer clip={clip} playing={playing} />
         </Sequence>
       ))}
     </AbsoluteFill>
