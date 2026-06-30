@@ -283,11 +283,20 @@ export const Inspector: React.FC = () => {
           <div className="field">
             <label>① 셀렉트 박스로 선택</label>
             <select value={regionSelect} onChange={(e) => setRegionSelect(e.target.value)}>
-              {regionEffectList.map((r) => (
-                <option key={r.type} value={r.type}>
-                  {r.label}
-                </option>
-              ))}
+              <optgroup label="영역 효과">
+                {regionEffectList.map((r) => (
+                  <option key={r.type} value={r.type}>
+                    {r.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="애니메이션 (선택 영역에)">
+                {animationList.map((a) => (
+                  <option key={a.type} value={a.type}>
+                    {a.label}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </div>
           <button className="primary" style={{ width: "100%", marginBottom: 10 }} onClick={() => applyRegion(regionSelect)}>
@@ -366,9 +375,10 @@ export const Inspector: React.FC = () => {
         <div className="section">
           <h3>적용된 효과</h3>
           {clip.effects.map((e) => {
-            const def = filterEffectRegistry[e.type] ?? regionEffectRegistry[e.type];
+            const def = filterEffectRegistry[e.type] ?? regionEffectRegistry[e.type] ?? animationRegistry[e.type];
             if (!def) return null;
-            const isRegion = e.type in regionEffectRegistry;
+            const isAnim = e.type in animationRegistry;
+            const isRegion = e.type in regionEffectRegistry || (isAnim && !!e.region);
             return (
               <div key={e.id} style={{ marginBottom: 8 }}>
                 <div className="chip">

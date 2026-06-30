@@ -25,7 +25,7 @@ const clipBadges = (clip: Clip): Badge[] => [
   })),
   ...clip.effects.map((e) => ({
     id: e.id,
-    label: (filterEffectRegistry[e.type] ?? regionEffectRegistry[e.type])?.label ?? e.type,
+    label: (filterEffectRegistry[e.type] ?? regionEffectRegistry[e.type] ?? animationRegistry[e.type])?.label ?? e.type,
     cls: "effect" as const,
     start: e.start ?? clip.start,
     duration: e.duration ?? clip.duration,

@@ -442,7 +442,8 @@ export const useStore = create<State>((set, get) => {
 
     addEffect: (clipId, type, region) =>
       mutateClip(clipId, (c) => {
-        const def = filterEffectRegistry[type] ?? regionEffectRegistry[type];
+        // `type` may be a filter, a region effect, or an animation applied to a region.
+        const def = filterEffectRegistry[type] ?? regionEffectRegistry[type] ?? animationRegistry[type];
         if (!def) return;
         c.effects.push({
           id: uid(),

@@ -287,7 +287,7 @@ export const animationRegistry: Record<string, AnimationDef> = {
     category: "in",
     params: [
       { key: "startScale", label: "시작 배율", type: "number", default: 1.8, min: 1.1, max: 5, step: 0.1 },
-      { key: "duration", label: "길이(초)", type: "number", default: 0.2, min: 0.05, max: 1, step: 0.05 },
+      { key: "duration", label: "길이(초)", type: "number", default: 0.2, min: 0.05, max: 3, step: 0.05 },
     ],
     apply: ({ frame, fps, params }) => {
       const d = Math.max(1, num(params, "duration", 0.2) * fps);

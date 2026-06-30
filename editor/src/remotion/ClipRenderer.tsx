@@ -13,7 +13,7 @@ import {
 } from "remotion";
 import { Rect as ShapeRect, Circle, Triangle, Star, Ellipse } from "@remotion/shapes";
 import type { Clip } from "../types";
-import { composeAnimations } from "./animations";
+import { composeAnimations, animationRegistry } from "./animations";
 import { regionEffectRegistry } from "./effects";
 import { TextClipRenderer } from "./TextClipRenderer";
 
@@ -195,6 +195,39 @@ export const ClipRenderer: React.FC<{ clip: Clip }> = ({ clip }) => {
     })
     .filter(Boolean);
 
+  // Animation applied to a region: a copy of the clip content, masked to the rect and
+  // driven by the chosen animation (slam in, blur out, …) over the effect's own window.
+  const regionAnimLayers = clip.effects
+    .map((e) => {
+      const aDef = animationRegistry[e.type];
+      if (!aDef || !e.region || !active(e)) return null;
+      const r = e.region;
+      const left = r.x * width;
+      const top = r.y * height;
+      const w = r.width * width;
+      const h = r.height * height;
+      const aDur = e.duration ?? clip.duration;
+      const s = aDef.apply({ frame: absFrame - (e.start ?? clip.start), durationInFrames: aDur, fps, params: e.params });
+      return (
+        <AbsoluteFill
+          key={e.id}
+          style={{ clipPath: `inset(${top}px ${width - left - w}px ${height - top - h}px ${left}px)`, pointerEvents: "none" }}
+        >
+          <AbsoluteFill
+            style={{
+              transform: `translate(${s.translateX ?? 0}px, ${s.translateY ?? 0}px) scale(${s.scale ?? 1}) rotate(${s.rotate ?? 0}deg)`,
+              transformOrigin: `${left + w / 2}px ${top + h / 2}px`,
+              opacity: s.opacity ?? 1,
+              filter: s.blur ? `blur(${s.blur}px)` : undefined,
+            }}
+          >
+            <InnerContent clip={clip} silent />
+          </AbsoluteFill>
+        </AbsoluteFill>
+      );
+    })
+    .filter(Boolean);
+
   return (
     <AbsoluteFill
       style={{
@@ -208,6 +241,7 @@ export const ClipRenderer: React.FC<{ clip: Clip }> = ({ clip }) => {
       <InnerContent clip={clip} />
       {glowLayer}
       {regionLayers}
+      {regionAnimLayers}
     </AbsoluteFill>
   );
 };
