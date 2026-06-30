@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "node server/render.mjs"
   },
   "dependencies": {
+    "@remotion/bundler": "4.0.484",
     "@remotion/effects": "4.0.484",
     "@remotion/media": "4.0.484",
     "@remotion/player": "4.0.484",
+    "@remotion/renderer": "4.0.484",
     "@remotion/shapes": "4.0.484",
     "@remotion/transitions": "4.0.484",
     "react": "19.2.3",

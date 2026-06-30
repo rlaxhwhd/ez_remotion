@@ -30,7 +30,7 @@ export async function putAsset(id: string, blob: Blob): Promise<void> {
   }
 }
 
-async function getAsset(id: string): Promise<Blob | undefined> {
+export async function getAsset(id: string): Promise<Blob | undefined> {
   const db = await openDB();
   try {
     return await new Promise<Blob | undefined>((resolve, reject) => {

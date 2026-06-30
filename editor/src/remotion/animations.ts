@@ -558,8 +558,10 @@ export const animationRegistry: Record<string, AnimationDef> = {
 export const animationList = Object.values(animationRegistry);
 
 export const composeAnimations = (
-  defs: { type: string; params: Record<string, ParamValue> }[],
-  ctx: Omit<AnimContext, "params">,
+  // each animation carries its own frame + duration so it can be timed
+  // independently of the clip (frame is relative to the animation's own start)
+  defs: { type: string; params: Record<string, ParamValue>; frame: number; durationInFrames: number }[],
+  fps: number,
 ): Required<AnimStyle> => {
   const out: Required<AnimStyle> = {
     opacity: 1,
@@ -572,7 +574,7 @@ export const composeAnimations = (
   for (const a of defs) {
     const def = animationRegistry[a.type];
     if (!def) continue;
-    const s = def.apply({ ...ctx, params: a.params });
+    const s = def.apply({ frame: a.frame, durationInFrames: a.durationInFrames, fps, params: a.params });
     if (s.opacity !== undefined) out.opacity *= s.opacity;
     if (s.scale !== undefined) out.scale *= s.scale;
     if (s.translateX !== undefined) out.translateX += s.translateX;

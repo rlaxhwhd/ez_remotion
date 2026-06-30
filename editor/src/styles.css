@@ -342,6 +342,19 @@ input[type="range"] {
 .clip .handle.r {
   right: 0;
 }
+.subclip .handle {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  cursor: ew-resize;
+}
+.subclip .handle.l {
+  left: 0;
+}
+.subclip .handle.r {
+  right: 0;
+}
 .playhead {
   position: absolute;
   top: 0;

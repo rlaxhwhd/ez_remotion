@@ -7,3 +7,6 @@ dist/
 .playwright-mcp/
 my-video/
 .gstack/
+# render server scratch (uploaded media + rendered mp4s)
+editor/server/render-assets/
+editor/server/render-out/

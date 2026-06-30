@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { PlayerRef } from "@remotion/player";
 import { MediaPanel } from "./components/MediaPanel";
 import { PreviewPanel } from "./components/PreviewPanel";
@@ -6,6 +6,7 @@ import { Inspector } from "./components/Inspector";
 import { Timeline } from "./components/Timeline";
 import { useStore } from "./store";
 import { loadProject } from "./lib/persist";
+import { exportProject } from "./lib/exporter";
 
 const fmt = (frame: number, fps: number) => {
   const totalSec = frame / fps;
@@ -25,6 +26,17 @@ export const App: React.FC = () => {
   const removeClip = useStore((s) => s.removeClip);
   const setCurrentFrame = useStore((s) => s.setCurrentFrame);
   const replaceProject = useStore((s) => s.replaceProject);
+
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
+  const exporting = exportStatus !== null && !exportStatus.startsWith("완료") && !exportStatus.startsWith("오류");
+
+  const onExport = async () => {
+    try {
+      await exportProject(project, setExportStatus);
+    } catch (e) {
+      setExportStatus("오류: " + (e as Error).message);
+    }
+  };
 
   // restore the saved project (and its media) on first load
   useEffect(() => {
@@ -76,9 +88,22 @@ export const App: React.FC = () => {
           컷편집 · 줌 · 애니메이션 · 영역 연출 효과
         </span>
         <div className="spacer" />
+        {exportStatus && (
+          <span className="muted" style={{ fontSize: 11 }}>
+            {exportStatus}
+          </span>
+        )}
         <span className="muted" style={{ fontSize: 11 }}>
           {project.width}×{project.height} · {project.fps}fps · {(project.durationInFrames / project.fps).toFixed(1)}s
         </span>
+        <button
+          className="primary"
+          onClick={onExport}
+          disabled={exporting || project.clips.length === 0}
+          title="전체 타임라인을 mp4로 내보냅니다 (로컬 렌더 서버 필요: npm run server). 60fps로 받으려면 캔버스 FPS를 60으로 설정하세요."
+        >
+          {exporting ? "⏳ 내보내는 중…" : "⬇ 내보내기 (mp4)"}
+        </button>
       </header>
 
       <div className="main">

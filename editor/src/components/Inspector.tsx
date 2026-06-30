@@ -9,7 +9,7 @@ import {
   regionEffectRegistry,
 } from "../remotion/effects";
 import { parseRegionCommand } from "../lib/regionCommand";
-import type { Clip, TransitionKind, VideoClip } from "../types";
+import type { Clip, TextStyle, TransitionKind, VideoClip } from "../types";
 
 const transitionKinds: { value: TransitionKind; label: string }[] = [
   { value: "none", label: "없음" },
@@ -18,6 +18,23 @@ const transitionKinds: { value: TransitionKind; label: string }[] = [
   { value: "wipe", label: "와이프" },
   { value: "flip", label: "플립" },
   { value: "clockWipe", label: "세로 와이프" },
+];
+
+// Fonts loaded via the Google Fonts <link> in index.html.
+const fontOptions: { value: string; label: string }[] = [
+  { value: "system-ui, sans-serif", label: "시스템 기본" },
+  { value: "'Noto Sans KR', sans-serif", label: "본고딕 (Noto Sans KR)" },
+  { value: "'Black Han Sans', sans-serif", label: "검은고딕" },
+  { value: "'Jua', sans-serif", label: "주아" },
+  { value: "'Do Hyeon', sans-serif", label: "도현" },
+  { value: "'Gowun Dodum', sans-serif", label: "고운돋움" },
+  { value: "'Gaegu', cursive", label: "개구 (손글씨)" },
+  { value: "'Nanum Pen Script', cursive", label: "나눔손글씨 펜" },
+  { value: "'Anton', sans-serif", label: "Anton (굵은 영문)" },
+  { value: "'Bebas Neue', sans-serif", label: "Bebas Neue" },
+  { value: "'Montserrat', sans-serif", label: "Montserrat" },
+  { value: "'Playfair Display', serif", label: "Playfair Display" },
+  { value: "'Pacifico', cursive", label: "Pacifico (필기)" },
 ];
 
 export const Inspector: React.FC = () => {
@@ -376,6 +393,20 @@ const ClipSpecificProps: React.FC<{ clip: Clip; updateClip: (id: string, patch: 
         <div className="field">
           <textarea rows={2} value={clip.text} onChange={(e) => updateClip(clip.id, { text: e.target.value })} />
         </div>
+        <div className="field">
+          <label>폰트</label>
+          <select
+            value={clip.fontFamily}
+            style={{ fontFamily: clip.fontFamily }}
+            onChange={(e) => updateClip(clip.id, { fontFamily: e.target.value })}
+          >
+            {fontOptions.map((f) => (
+              <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="grid2">
           <NumField label="크기" value={clip.fontSize} onChange={(v) => updateClip(clip.id, { fontSize: v })} />
           <NumField label="굵기" value={clip.fontWeight} step={100} onChange={(v) => updateClip(clip.id, { fontWeight: v })} />
@@ -394,6 +425,38 @@ const ClipSpecificProps: React.FC<{ clip: Clip; updateClip: (id: string, patch: 
             </select>
           </div>
         </div>
+
+        <div className="field">
+          <label>스타일</label>
+          <select value={clip.textStyle ?? "none"} onChange={(e) => updateClip(clip.id, { textStyle: e.target.value as TextStyle })}>
+            <option value="none">없음</option>
+            <option value="neon">네온</option>
+            <option value="glitch">글리치</option>
+            <option value="3d">3D 입체</option>
+            <option value="metal">금속/그라데이션</option>
+            <option value="outline">외곽선</option>
+          </select>
+        </div>
+        {clip.textStyle && clip.textStyle !== "none" && (
+          <div className="field">
+            <label>스타일 색상</label>
+            <input type="color" value={clip.styleColor ?? clip.color} onChange={(e) => updateClip(clip.id, { styleColor: e.target.value })} />
+          </div>
+        )}
+        <div className="field">
+          <label>곡률 · 아치 · {(clip.curve ?? 0).toFixed(2)}</label>
+          <input type="range" min={-1} max={1} step={0.05} value={clip.curve ?? 0} onChange={(e) => updateClip(clip.id, { curve: Number(e.target.value) })} />
+        </div>
+        <label className="row">
+          <input type="checkbox" style={{ width: "auto" }} checked={!!clip.karaoke} onChange={(e) => updateClip(clip.id, { karaoke: e.target.checked })} /> 노래방 자막 (시간에 따라 채움)
+        </label>
+        {clip.karaoke && (
+          <div className="field">
+            <label>채움 색</label>
+            <input type="color" value={clip.karaokeColor ?? "#ffd400"} onChange={(e) => updateClip(clip.id, { karaokeColor: e.target.value })} />
+          </div>
+        )}
+        {clip.karaoke && (clip.curve ?? 0) !== 0 && <p className="hint">곡선과 노래방은 함께 쓰면 곡선이 우선 적용됩니다.</p>}
       </div>
     );
   }

@@ -14,12 +14,21 @@ const SUB_H = 16;
 const SUB_GAP = 3;
 const ROW_BOTTOM = 6;
 
-type Badge = { label: string; cls: "anim" | "effect" };
+type Badge = { id: string; label: string; cls: "anim" | "effect"; start: number; duration: number };
 const clipBadges = (clip: Clip): Badge[] => [
-  ...clip.animations.map((a) => ({ label: animationRegistry[a.type]?.label ?? a.type, cls: "anim" as const })),
+  ...clip.animations.map((a) => ({
+    id: a.id,
+    label: animationRegistry[a.type]?.label ?? a.type,
+    cls: "anim" as const,
+    start: a.start ?? clip.start,
+    duration: a.duration ?? clip.duration,
+  })),
   ...clip.effects.map((e) => ({
+    id: e.id,
     label: (filterEffectRegistry[e.type] ?? regionEffectRegistry[e.type])?.label ?? e.type,
     cls: "effect" as const,
+    start: e.start ?? clip.start,
+    duration: e.duration ?? clip.duration,
   })),
 ];
 
@@ -46,6 +55,7 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
   const selectClip = useStore((s) => s.selectClip);
   const moveClipStart = useStore((s) => s.moveClipStart);
   const resizeClip = useStore((s) => s.resizeClip);
+  const setOverlayTiming = useStore((s) => s.setOverlayTiming);
   const currentFrame = useStore((s) => s.currentFrame);
   const setCurrentFrame = useStore((s) => s.setCurrentFrame);
 
@@ -139,6 +149,28 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
     window.addEventListener("mouseup", onUp);
   };
 
+  // drag move / resize an animation or effect bar — independent of its clip
+  const startSubDrag = (e: React.MouseEvent, clip: Clip, badge: Badge, mode: "move" | "left" | "right") => {
+    e.stopPropagation();
+    selectClip(clip.id);
+    setSelectedSubId(badge.id);
+    const startX = e.clientX;
+    const origStart = badge.start;
+    const origDur = badge.duration;
+    const onMove = (me: MouseEvent) => {
+      const df = Math.round((me.clientX - startX) / ppf);
+      if (mode === "move") setOverlayTiming(clip.id, badge.cls, badge.id, origStart + df, origDur);
+      else if (mode === "right") setOverlayTiming(clip.id, badge.cls, badge.id, origStart, origDur + df);
+      else setOverlayTiming(clip.id, badge.cls, badge.id, origStart + df, origDur - df);
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
   // ruler ticks every second
   const ticks: React.ReactNode[] = [];
   const totalSeconds = Math.ceil(totalFrames / project.fps);
@@ -196,27 +228,27 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{clip.name}</span>
                         <div className="handle r" onMouseDown={(e) => startDrag(e, clip, "right")} />
                       </div>
-                      {clipBadges(clip).map((b, i) => {
-                        const subId = b.cls === "anim"
-                          ? clip.animations[i]?.id
-                          : clip.effects[i - clip.animations.length]?.id;
-                        return (
-                          <div
-                            key={i}
-                            className={"subclip " + b.cls + (selectedSubId === subId ? " sub-selected" : "")}
-                            style={{ left, width, top: ROW_TOP + CLIP_H + SUB_GAP + i * SUB_H, height: SUB_H - 2 }}
-                            title={b.label}
-                            onMouseDown={(e) => {
-                              e.stopPropagation();
-                              selectClip(clip.id);
-                              setSelectedSubId(subId ?? null);
-                            }}
-                          >
+                      {clipBadges(clip).map((b, i) => (
+                        <div
+                          key={b.id}
+                          className={"subclip " + b.cls + (selectedSubId === b.id ? " sub-selected" : "")}
+                          style={{
+                            left: LABEL_W + b.start * ppf,
+                            width: Math.max(8, b.duration * ppf),
+                            top: ROW_TOP + CLIP_H + SUB_GAP + i * SUB_H,
+                            height: SUB_H - 2,
+                          }}
+                          title={`${b.label} — 드래그로 이동, 양 끝으로 길이 조절`}
+                          onMouseDown={(e) => startSubDrag(e, clip, b, "move")}
+                        >
+                          <div className="handle l" onMouseDown={(e) => startSubDrag(e, clip, b, "left")} />
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", pointerEvents: "none" }}>
                             {b.cls === "anim" ? "✨ " : "🎨 "}
                             {b.label}
-                          </div>
-                        );
-                      })}
+                          </span>
+                          <div className="handle r" onMouseDown={(e) => startSubDrag(e, clip, b, "right")} />
+                        </div>
+                      ))}
                     </React.Fragment>
                   );
                 })}

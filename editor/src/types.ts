@@ -22,19 +22,26 @@ export type Transform = {
 export type ParamValue = number | string | boolean;
 
 // An applied animation (entrance/emphasis/exit). `type` keys into animationRegistry.
+// `start`/`duration` are absolute timeline frames so the animation can be timed
+// independently of its parent clip. When undefined, it spans the whole clip.
 export type AnimationInstance = {
   id: string;
   type: string;
   params: Record<string, ParamValue>;
+  start?: number;
+  duration?: number;
 };
 
 // An applied visual effect. `type` keys into effectRegistry.
 // When `region` is set, the effect is masked to that rectangle (selection tool).
+// `start`/`duration` (absolute timeline frames) time it independently of the clip.
 export type EffectInstance = {
   id: string;
   type: string;
   params: Record<string, ParamValue>;
   region?: Rect | null;
+  start?: number;
+  duration?: number;
 };
 
 export type TransitionKind = "none" | "fade" | "slide" | "wipe" | "flip" | "clockWipe";
@@ -76,6 +83,8 @@ export type ImageClip = ClipBase & {
   naturalHeight: number;
 };
 
+export type TextStyle = "none" | "neon" | "glitch" | "3d" | "metal" | "outline";
+
 export type TextClip = ClipBase & {
   kind: "text";
   text: string;
@@ -85,6 +94,11 @@ export type TextClip = ClipBase & {
   fontFamily: string;
   align: "left" | "center" | "right";
   background: string; // "transparent" or rgba
+  textStyle?: TextStyle; // CSS look preset (neon/glitch/3d/metal/outline)
+  styleColor?: string; // accent colour for the preset (glow/stroke/gradient)
+  curve?: number; // -1..1 arch curvature; 0 = straight (SVG textPath)
+  karaoke?: boolean; // sweep a highlight colour across the text over time
+  karaokeColor?: string;
 };
 
 export type ShapeClip = ClipBase & {

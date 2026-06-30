@@ -13,6 +13,7 @@ import { Rect as ShapeRect, Circle, Triangle, Star, Ellipse } from "@remotion/sh
 import type { Clip } from "../types";
 import { composeAnimations } from "./animations";
 import { regionEffectRegistry } from "./effects";
+import { TextClipRenderer } from "./TextClipRenderer";
 
 const transitionStyle = (
   kind: string,
@@ -68,33 +69,7 @@ const InnerContent: React.FC<{ clip: Clip; silent?: boolean }> = ({ clip, silent
         />
       );
     case "text":
-      return (
-        <AbsoluteFill
-          style={{
-            justifyContent: "center",
-            alignItems:
-              clip.align === "left" ? "flex-start" : clip.align === "right" ? "flex-end" : "center",
-            padding: 60,
-          }}
-        >
-          <div
-            style={{
-              fontSize: clip.fontSize,
-              color: clip.color,
-              fontWeight: clip.fontWeight,
-              fontFamily: clip.fontFamily,
-              textAlign: clip.align,
-              background: clip.background,
-              padding: clip.background === "transparent" ? 0 : "0.2em 0.5em",
-              borderRadius: 12,
-              whiteSpace: "pre-wrap",
-              lineHeight: 1.2,
-            }}
-          >
-            {clip.text}
-          </div>
-        </AbsoluteFill>
-      );
+      return <TextClipRenderer clip={clip} />;
     case "shape": {
       const common = { fill: clip.fill };
       const w = clip.width;
@@ -123,9 +98,25 @@ export const ClipRenderer: React.FC<{ clip: Clip }> = ({ clip }) => {
     return <InnerContent clip={clip} />;
   }
 
+  // Absolute timeline frame, and whether an overlay's own [start,duration] window
+  // is active now — animations/effects can be timed independently of the clip.
+  const absFrame = clip.start + frame;
+  const active = (o: { start?: number; duration?: number }) => {
+    const s = o.start ?? clip.start;
+    const d = o.duration ?? clip.duration;
+    return absFrame >= s && absFrame < s + d;
+  };
+
   const anim = composeAnimations(
-    clip.animations.map((a) => ({ type: a.type, params: a.params })),
-    { frame, durationInFrames: clip.duration, fps },
+    clip.animations
+      .filter(active)
+      .map((a) => ({
+        type: a.type,
+        params: a.params,
+        frame: absFrame - (a.start ?? clip.start),
+        durationInFrames: a.duration ?? clip.duration,
+      })),
+    fps,
   );
 
   // Reframe (zoom-to-region) effects modify the whole-clip transform.
@@ -134,7 +125,7 @@ export const ClipRenderer: React.FC<{ clip: Clip }> = ({ clip }) => {
   let reframeScale = 1;
   for (const e of clip.effects) {
     const def = regionEffectRegistry[e.type];
-    if (def?.mode === "reframe" && def.reframe && e.region) {
+    if (def?.mode === "reframe" && def.reframe && e.region && active(e)) {
       const r = def.reframe(e.region, { width, height });
       reframeX += r.x;
       reframeY += r.y;
@@ -156,7 +147,7 @@ export const ClipRenderer: React.FC<{ clip: Clip }> = ({ clip }) => {
 
   // Glow (bloom): a blurred, brightened copy of the clip screen-blended on top.
   // CSS-only so it doesn't reintroduce the WebGL-decoder playback stutter.
-  const glow = clip.effects.find((e) => e.type === "glow");
+  const glow = clip.effects.find((e) => e.type === "glow" && active(e));
   const glowLayer = glow
     ? (() => {
         const p = glow.params;
@@ -182,7 +173,7 @@ export const ClipRenderer: React.FC<{ clip: Clip }> = ({ clip }) => {
   const regionLayers = clip.effects
     .map((e) => {
       const def = regionEffectRegistry[e.type];
-      if (!def || def.mode !== "region" || !def.layerStyle || !e.region) return null;
+      if (!def || def.mode !== "region" || !def.layerStyle || !e.region || !active(e)) return null;
       const rectPx = {
         left: e.region.x * width,
         top: e.region.y * height,

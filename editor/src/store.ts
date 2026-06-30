@@ -77,6 +77,9 @@ type State = {
   addEffect: (clipId: string, type: string, region?: Rect | null) => void;
   removeEffect: (clipId: string, effectId: string) => void;
   updateEffectParam: (clipId: string, effectId: string, key: string, value: ParamValue) => void;
+
+  // independent timing of an animation/effect ("overlay") on the timeline
+  setOverlayTiming: (clipId: string, cls: "anim" | "effect", id: string, start: number, duration: number) => void;
 };
 
 const recalcDuration = (project: Project): number => {
@@ -324,7 +327,13 @@ export const useStore = create<State>((set, get) => {
       mutateClip(clipId, (c) => {
         const def = animationRegistry[type];
         if (!def) return;
-        c.animations.push({ id: uid(), type, params: { ...defaultParamsFor(def.params), ...paramOverrides } });
+        c.animations.push({
+          id: uid(),
+          type,
+          params: { ...defaultParamsFor(def.params), ...paramOverrides },
+          start: c.start,
+          duration: c.duration,
+        });
       }),
 
     removeAnimation: (clipId, animId) =>
@@ -342,7 +351,14 @@ export const useStore = create<State>((set, get) => {
       mutateClip(clipId, (c) => {
         const def = filterEffectRegistry[type] ?? regionEffectRegistry[type];
         if (!def) return;
-        c.effects.push({ id: uid(), type, params: defaultParamsFor(def.params), region: region ?? null });
+        c.effects.push({
+          id: uid(),
+          type,
+          params: defaultParamsFor(def.params),
+          region: region ?? null,
+          start: c.start,
+          duration: c.duration,
+        });
       }),
 
     removeEffect: (clipId, effectId) =>
@@ -354,6 +370,22 @@ export const useStore = create<State>((set, get) => {
       mutateClip(clipId, (c) => {
         const e = c.effects.find((x) => x.id === effectId);
         if (e) e.params = { ...e.params, [key]: value };
+      }),
+
+    setOverlayTiming: (clipId, cls, id, start, duration) =>
+      mutateClip(clipId, (c) => {
+        // clamp the overlay window to the clip's visible range
+        const lo = c.start;
+        const hi = c.start + c.duration;
+        let s = Math.round(start);
+        let d = Math.max(1, Math.round(duration));
+        s = Math.max(lo, Math.min(s, hi - 1));
+        d = Math.min(d, hi - s);
+        const item = (cls === "anim" ? c.animations : c.effects).find((x) => x.id === id);
+        if (item) {
+          item.start = s;
+          item.duration = d;
+        }
       }),
   };
 });

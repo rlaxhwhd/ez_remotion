@@ -21,6 +21,11 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({ project }) =
     .slice()
     .sort((a, b) => (trackIndex.get(b.trackId) ?? 0) - (trackIndex.get(a.trackId) ?? 0));
 
+  // Mount each clip ~1s before it starts (hidden) so its video/image is decoded
+  // and ready at the cut — otherwise a back-to-back clip flashes black for a frame
+  // while the next source loads.
+  const premountFor = Math.max(1, Math.round(project.fps));
+
   return (
     <AbsoluteFill style={{ background: project.background }}>
       {visibleClips.map((clip) => (
@@ -28,7 +33,7 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({ project }) =
           key={clip.id}
           from={clip.start}
           durationInFrames={Math.max(1, clip.duration)}
-          layout="none"
+          premountFor={premountFor}
         >
           <ClipRenderer clip={clip} />
         </Sequence>
