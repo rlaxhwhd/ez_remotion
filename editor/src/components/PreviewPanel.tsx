@@ -122,15 +122,35 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
     setDrag(null);
   };
 
-  // Clip bounding box in stage-local pixels (used for bbox outline + resize handles)
+  // Clip bounding box in stage-local pixels (used for bbox outline + resize handles).
+  // For image/video, uses objectFit:"contain" math so the box matches the actual
+  // rendered content (not the full AbsoluteFill/composition size).
   const clipBounds = (() => {
     if (!selClip || selClip.kind === "audio" || tool !== "select") return null;
-    const sx = stageSize.w / project.width;
-    const sy = stageSize.h / project.height;
-    const cx = stageSize.w / 2 + selClip.transform.x * sx;
-    const cy = stageSize.h / 2 + selClip.transform.y * sy;
-    const hw = (stageSize.w * selClip.transform.scale) / 2;
-    const hh = (stageSize.h * selClip.transform.scale) / 2;
+    const stageScale = stageSize.w / project.width; // composition → stage ratio
+
+    // Actual content size in composition pixels (before transform.scale)
+    let contentW = project.width;
+    let contentH = project.height;
+    if (selClip.kind === "image" || selClip.kind === "video") {
+      const imgAspect = selClip.naturalWidth / selClip.naturalHeight;
+      const compAspect = project.width / project.height;
+      if (imgAspect >= compAspect) {
+        contentW = project.width;
+        contentH = project.width / imgAspect;
+      } else {
+        contentH = project.height;
+        contentW = project.height * imgAspect;
+      }
+    } else if (selClip.kind === "shape") {
+      contentW = selClip.width;
+      contentH = selClip.height;
+    }
+
+    const cx = stageSize.w / 2 + selClip.transform.x * stageScale;
+    const cy = stageSize.h / 2 + selClip.transform.y * stageScale;
+    const hw = (contentW * stageScale * selClip.transform.scale) / 2;
+    const hh = (contentH * stageScale * selClip.transform.scale) / 2;
     return { cx, cy, left: cx - hw, top: cy - hh, right: cx + hw, bottom: cy + hh, w: hw * 2, h: hh * 2 };
   })();
 
