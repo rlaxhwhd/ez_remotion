@@ -427,3 +427,20 @@ input[type="range"] {
   font-size: 12px;
   line-height: 1.6;
 }
+
+.clip-bbox {
+  position: absolute;
+  border: 1px dashed var(--accent);
+  pointer-events: none;
+  z-index: 6;
+  border-radius: 2px;
+}
+.resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: 2px solid var(--accent);
+  border-radius: 2px;
+  z-index: 7;
+}

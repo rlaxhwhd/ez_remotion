@@ -3,7 +3,7 @@
 import { spawn } from "node:child_process";
 
 const opts = { stdio: "inherit", shell: true };
-const procs = [spawn("npm", ["run", "dev"], opts), spawn("npm", ["run", "server"], opts)];
+const procs = [spawn("pnpm", ["run", "dev"], opts), spawn("pnpm", ["run", "server"], opts)];
 
 const shutdown = () => {
   for (const p of procs) p.kill();

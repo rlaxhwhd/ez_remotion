@@ -19,8 +19,11 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
   const isPlayingRef = useRef(false);
   const [stageSize, setStageSize] = useState({ w: 640, h: 360 });
   const [drag, setDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
-  // active drag-to-move of the selected clip's position (transform x/y)
   const [moveDrag, setMoveDrag] = useState<{ x0: number; y0: number; origX: number; origY: number } | null>(null);
+  // resize drag: stores stage-local start coords + original scale + clip center
+  const [resizeDrag, setResizeDrag] = useState<{
+    x0: number; y0: number; origScale: number; cx: number; cy: number;
+  } | null>(null);
 
   // fit the stage into the available area, preserving the composition aspect ratio
   useEffect(() => {
@@ -119,6 +122,18 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
     setDrag(null);
   };
 
+  // Clip bounding box in stage-local pixels (used for bbox outline + resize handles)
+  const clipBounds = (() => {
+    if (!selClip || selClip.kind === "audio" || tool !== "select") return null;
+    const sx = stageSize.w / project.width;
+    const sy = stageSize.h / project.height;
+    const cx = stageSize.w / 2 + selClip.transform.x * sx;
+    const cy = stageSize.h / 2 + selClip.transform.y * sy;
+    const hw = (stageSize.w * selClip.transform.scale) / 2;
+    const hh = (stageSize.h * selClip.transform.scale) / 2;
+    return { cx, cy, left: cx - hw, top: cy - hh, right: cx + hw, bottom: cy + hh, w: hw * 2, h: hh * 2 };
+  })();
+
   // ── drag-to-move the selected clip in the preview (select tool) ────────────
   const onMoveDown = (e: React.MouseEvent) => {
     if (!selClip || selClip.kind === "audio") return;
@@ -136,7 +151,42 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
       },
     });
   };
-  const onMoveUp = () => setMoveDrag(null);
+
+  // ── resize via corner handles ─────────────────────────────────────────────
+  const onResizeDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!selClip || !clipBounds || !stageRef.current) return;
+    const rect = stageRef.current.getBoundingClientRect();
+    setResizeDrag({
+      x0: e.clientX - rect.left,
+      y0: e.clientY - rect.top,
+      origScale: selClip.transform.scale,
+      cx: clipBounds.cx,
+      cy: clipBounds.cy,
+    });
+  };
+
+  // Combined overlay handlers — resize takes priority over move
+  const onOverlayMove = (e: React.MouseEvent) => {
+    if (resizeDrag && selClip && stageRef.current) {
+      const rect = stageRef.current.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const dist0 = Math.hypot(resizeDrag.x0 - resizeDrag.cx, resizeDrag.y0 - resizeDrag.cy);
+      const dist1 = Math.hypot(mx - resizeDrag.cx, my - resizeDrag.cy);
+      if (dist0 > 1) {
+        const newScale = Math.max(0.05, Math.min(5, resizeDrag.origScale * (dist1 / dist0)));
+        updateClip(selClip.id, { transform: { ...selClip.transform, scale: +newScale.toFixed(2) } });
+      }
+      return;
+    }
+    onMoveMove(e);
+  };
+
+  const onOverlayUp = () => {
+    setResizeDrag(null);
+    setMoveDrag(null);
+  };
 
   // visual rect for pending region or active drag
   const liveRect =
@@ -190,14 +240,36 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
             )}
           </div>
         )}
+        {/* Bounding box + resize handles for selected clip */}
+        {clipBounds && (
+          <>
+            <div
+              className="clip-bbox"
+              style={{ left: clipBounds.left, top: clipBounds.top, width: clipBounds.w, height: clipBounds.h }}
+            />
+            {([
+              [clipBounds.left, clipBounds.top, "nw-resize"],
+              [clipBounds.right, clipBounds.top, "ne-resize"],
+              [clipBounds.right, clipBounds.bottom, "se-resize"],
+              [clipBounds.left, clipBounds.bottom, "sw-resize"],
+            ] as [number, number, string][]).map(([x, y, cursor], i) => (
+              <div
+                key={i}
+                className="resize-handle"
+                style={{ left: x - 5, top: y - 5, cursor }}
+                onMouseDown={onResizeDown}
+              />
+            ))}
+          </>
+        )}
         {tool === "select" && selClip && selClip.kind !== "audio" && (
           <div
             className="move-overlay"
-            style={{ cursor: moveDrag ? "grabbing" : "grab" }}
+            style={{ cursor: resizeDrag ? "crosshair" : moveDrag ? "grabbing" : "grab" }}
             onMouseDown={onMoveDown}
-            onMouseMove={onMoveMove}
-            onMouseUp={onMoveUp}
-            onMouseLeave={onMoveUp}
+            onMouseMove={onOverlayMove}
+            onMouseUp={onOverlayUp}
+            onMouseLeave={onOverlayUp}
           />
         )}
       </div>
