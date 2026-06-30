@@ -56,7 +56,15 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
       if (!isPlayingRef.current || f % 3 === 0) setCurrentFrame(f);
     };
     const onPlay = () => { isPlayingRef.current = true; setPlaying(true); };
-    const onPause = () => { isPlayingRef.current = false; setPlaying(false); };
+    const onPause = () => {
+      isPlayingRef.current = false;
+      setPlaying(false);
+      // The throttle above lets currentFrame lag the player by up to 2 frames during
+      // playback. Snap it to the exact displayed frame on pause so the timeline
+      // playhead matches the preview and edits land on the frame the user sees.
+      setCurrentFrame(ref.getCurrentFrame());
+    };
+    if (import.meta.env.DEV) (window as unknown as { __player?: PlayerRef }).__player = ref;
     ref.addEventListener("frameupdate", onFrame);
     ref.addEventListener("play", onPlay);
     ref.addEventListener("pause", onPause);
