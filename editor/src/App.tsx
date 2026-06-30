@@ -26,6 +26,7 @@ export const App: React.FC = () => {
   const removeClip = useStore((s) => s.removeClip);
   const setCurrentFrame = useStore((s) => s.setCurrentFrame);
   const replaceProject = useStore((s) => s.replaceProject);
+  const undo = useStore((s) => s.undo);
 
   const [exportStatus, setExportStatus] = useState<string | null>(null);
   const exporting = exportStatus !== null && !exportStatus.startsWith("완료") && !exportStatus.startsWith("오류");
@@ -63,7 +64,10 @@ export const App: React.FC = () => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-      if (e.code === "Space") {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) {
+        e.preventDefault();
+        undo();
+      } else if (e.code === "Space") {
         e.preventDefault();
         togglePlay();
       } else if (e.key === "s" || e.key === "S") {
@@ -116,6 +120,9 @@ export const App: React.FC = () => {
               {isPlaying ? "❚❚ 정지" : "▶ 재생"}
             </button>
             <button onClick={() => seek(project.durationInFrames - 1)}>⏭</button>
+            <button onClick={undo} title="되돌리기 (Ctrl+Z)">
+              ↩ 되돌리기
+            </button>
             <button onClick={splitAtPlayhead} title="플레이헤드에서 분할 (S)">
               ✂ 분할
             </button>

@@ -310,7 +310,7 @@ export const Inspector: React.FC = () => {
           <label className="muted" style={{ display: "block", marginBottom: 4 }}>③ 버튼으로 빠르게</label>
           <div className="row wrap">
             {regionEffectList.map((r) => (
-              <button key={r.type} onClick={() => applyRegion(r.type)} style={{ fontSize: 11 }}>
+              <button key={r.type} onClick={() => applyRegion(r.type)} style={{ fontSize: 11, padding: "9px 10px" }}>
                 {r.label}
               </button>
             ))}

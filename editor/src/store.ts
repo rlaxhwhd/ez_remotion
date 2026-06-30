@@ -20,6 +20,12 @@ import { saveProject } from "./lib/persist";
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
+// Undo history — snapshots of previous project states. Recorded via a store
+// subscription; `suppressHistory` stops undo/load from recording themselves.
+const undoPast: Project[] = [];
+let suppressHistory = false;
+const UNDO_LIMIT = 60;
+
 const initialProject = (): Project => ({
   width: 1280,
   height: 720,
@@ -52,6 +58,7 @@ type State = {
   setPendingRegion: (r: Rect | null) => void;
   setProjectMeta: (meta: Partial<Pick<Project, "width" | "height" | "fps" | "background">>) => void;
   replaceProject: (project: Project) => void;
+  undo: () => void;
 
   // adding clips
   addVideoClip: (data: { src: string; assetId?: string; naturalWidth: number; naturalHeight: number; durationInFrames: number; name: string }) => void;
@@ -142,7 +149,20 @@ export const useStore = create<State>((set, get) => {
     setPixelsPerFrame: (p) => set({ pixelsPerFrame: Math.max(0.3, Math.min(40, p)) }),
     setPendingRegion: (r) => set({ pendingRegion: r }),
     setProjectMeta: (meta) => mutateProject((p) => Object.assign(p, meta)),
-    replaceProject: (project) => set({ project, selectedClipId: null }),
+    replaceProject: (project) => {
+      // a full load isn't an undoable edit — clear history and don't record it
+      suppressHistory = true;
+      undoPast.length = 0;
+      set({ project, selectedClipId: null });
+      suppressHistory = false;
+    },
+    undo: () => {
+      const project = undoPast.pop();
+      if (!project) return;
+      suppressHistory = true;
+      set({ project, selectedClipId: null });
+      suppressHistory = false;
+    },
 
     addVideoClip: ({ src, assetId, naturalWidth, naturalHeight, durationInFrames, name }) => {
       const id = uid();
@@ -394,6 +414,19 @@ export const useStore = create<State>((set, get) => {
 function structuredCloneProject(p: Project): Project {
   return structuredClone(p);
 }
+
+// Record undo history: push the previous project before each change. Rapid bursts
+// (e.g. a drag firing on every mousemove) are coalesced into a single entry so one
+// undo reverts the whole gesture.
+let lastHistoryTime = 0;
+useStore.subscribe((s, prev) => {
+  if (suppressHistory || s.project === prev.project) return;
+  const now = Date.now();
+  if (now - lastHistoryTime < 500) return;
+  lastHistoryTime = now;
+  undoPast.push(prev.project);
+  if (undoPast.length > UNDO_LIMIT) undoPast.shift();
+});
 
 // Persist the project to localStorage whenever it changes (debounced).
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
