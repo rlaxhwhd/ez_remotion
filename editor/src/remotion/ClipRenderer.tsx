@@ -65,8 +65,10 @@ const InnerContent: React.FC<{ clip: Clip; silent?: boolean; playing?: boolean }
           volume={vol}
           playbackRate={clip.playbackRate}
           style={style}
-          // loose while playing (no stutter), tight when paused (frame-exact picture)
-          acceptableTimeShiftInSeconds={playing ? 999 : 0.03}
+          // While playing keep some tolerance for smoothness, but small enough that a
+          // stalled video (e.g. after rapid play/pause) gets re-synced instead of
+          // freezing while the timeline runs. Tight when paused for a frame-exact picture.
+          acceptableTimeShiftInSeconds={playing ? 0.3 : 0.03}
         />
       );
     }

@@ -63,12 +63,9 @@ export const PreviewPanel: React.FC<{ playerRef: React.RefObject<PlayerRef | nul
       // The throttle above lets currentFrame lag the player by up to 2 frames during
       // playback. Snap it to the exact displayed frame on pause so the timeline
       // playhead matches the preview and edits land on the frame the user sees.
-      const f = ref.getCurrentFrame();
-      setCurrentFrame(f);
-      // Force a precise re-seek: `playing` flips to false, tightening the video's
-      // acceptableTimeShift, so this seekTo snaps the picture to the exact frame
-      // (during playback the picture can drift within the loose tolerance).
-      ref.seekTo(f);
+      // (Pausing flips `playing` to false → the video's tight tolerance re-renders it
+      // onto the exact frame. No seekTo here — that would fight rapid play/pause.)
+      setCurrentFrame(ref.getCurrentFrame());
     };
     if (import.meta.env.DEV) (window as unknown as { __player?: PlayerRef }).__player = ref;
     ref.addEventListener("frameupdate", onFrame);
