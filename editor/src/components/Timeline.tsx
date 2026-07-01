@@ -105,10 +105,15 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null>; 
     playerRef.current?.seekTo(f);
   };
 
-  const onRulerClick = (e: React.MouseEvent) => {
+  // Click anywhere on the ruler or an empty part of the timeline to move the playhead.
+  // Clips/overlays stopPropagation in their own mousedown, so this only fires on gaps.
+  const onTimelineMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
     const el = bodyRef.current;
     if (!el) return;
-    const x = e.clientX - el.getBoundingClientRect().left + el.scrollLeft - LABEL_W;
+    const rect = el.getBoundingClientRect();
+    if (e.clientX - rect.left < LABEL_W) return; // ignore the sticky track-label column
+    const x = e.clientX - rect.left + el.scrollLeft - LABEL_W;
     seek(x / ppf);
   };
 
@@ -230,8 +235,8 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null>; 
         />
       </div>
       <div className="timeline-body" ref={bodyRef}>
-        <div style={{ width: contentWidth, position: "relative" }}>
-          <div className="ruler" onClick={onRulerClick} style={{ width: contentWidth }}>
+        <div style={{ width: contentWidth, position: "relative" }} onMouseDown={onTimelineMouseDown}>
+          <div className="ruler" style={{ width: contentWidth }}>
             {ticks}
           </div>
 
