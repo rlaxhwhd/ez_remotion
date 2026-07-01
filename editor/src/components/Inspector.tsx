@@ -509,6 +509,9 @@ const ClipSpecificProps: React.FC<{ clip: Clip; updateClip: (id: string, patch: 
             <option value="ellipse">타원</option>
             <option value="triangle">삼각형</option>
             <option value="star">별</option>
+            <option value="bubbleRect">말풍선 (네모박스)</option>
+            <option value="bubbleRound">말풍선 (둥근박스)</option>
+            <option value="bubbleEllipse">말풍선 (타원박스)</option>
           </select>
         </div>
         <div className="grid2">

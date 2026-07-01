@@ -81,7 +81,34 @@ const InnerContent: React.FC<{ clip: Clip; silent?: boolean }> = ({ clip, silent
       const w = clip.width;
       const h = clip.height;
       let shape: React.ReactNode;
-      if (clip.shape === "rect") shape = <ShapeRect width={w} height={h} cornerRadius={clip.cornerRadius} {...common} />;
+      if (clip.shape === "bubbleRect" || clip.shape === "bubbleRound" || clip.shape === "bubbleEllipse") {
+        // Speech bubble: a body + a tail pointing left (not in @remotion/shapes).
+        const tw = Math.min(w * 0.28, h * 0.4); // how far the tail sticks out to the left
+        const th = h * 0.26; // tail's vertical spread where it meets the body
+        const cy = h / 2;
+        const bodyW = w - tw;
+        const baseX = tw + bodyW * 0.06; // overlap into the body so the tail joins seamlessly
+        const tail = `${baseX},${cy - th / 2} 0,${h * 0.66} ${baseX},${cy + th / 2}`;
+        const body =
+          clip.shape === "bubbleEllipse" ? (
+            <ellipse cx={tw + bodyW / 2} cy={cy} rx={bodyW / 2} ry={h / 2} fill={clip.fill} />
+          ) : (
+            <rect
+              x={tw}
+              y={0}
+              width={bodyW}
+              height={h}
+              rx={clip.shape === "bubbleRound" ? Math.min(bodyW, h) * 0.22 : 0}
+              fill={clip.fill}
+            />
+          );
+        shape = (
+          <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+            {body}
+            <polygon points={tail} fill={clip.fill} />
+          </svg>
+        );
+      } else if (clip.shape === "rect") shape = <ShapeRect width={w} height={h} cornerRadius={clip.cornerRadius} {...common} />;
       else if (clip.shape === "circle") shape = <Circle radius={Math.min(w, h) / 2} {...common} />;
       else if (clip.shape === "ellipse") shape = <Ellipse rx={w / 2} ry={h / 2} {...common} />;
       else if (clip.shape === "triangle") shape = <Triangle length={Math.min(w, h)} direction="up" {...common} />;

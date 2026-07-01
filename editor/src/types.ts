@@ -104,7 +104,7 @@ export type TextClip = ClipBase & {
 
 export type ShapeClip = ClipBase & {
   kind: "shape";
-  shape: "rect" | "circle" | "triangle" | "star" | "ellipse";
+  shape: "rect" | "circle" | "triangle" | "star" | "ellipse" | "bubbleRect" | "bubbleRound" | "bubbleEllipse";
   fill: string;
   width: number;
   height: number;
