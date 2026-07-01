@@ -429,7 +429,13 @@ export const useStore = create<State>((set, get) => {
           animations: c.animations.map((a) => ({ ...a, id: uid() })),
         };
         if (right.kind === "video" || right.kind === "audio") {
-          (right as VideoClip | AudioClip).trimStart = (c as VideoClip | AudioClip).trimStart + local;
+          // Advance the right half's trim by the SOURCE frames consumed up to the
+          // playhead: `local` timeline frames play `local * playbackRate` source frames.
+          // (Audio has no playbackRate → rate 1.) Using `local` alone skipped ahead and
+          // cut the video whenever the speed wasn't 1.
+          const rate = right.kind === "video" ? (right as VideoClip).playbackRate : 1;
+          (right as VideoClip | AudioClip).trimStart =
+            (c as VideoClip | AudioClip).trimStart + Math.round(local * rate);
         }
         c.duration = local;
         project.clips.splice(idx + 1, 0, right);
