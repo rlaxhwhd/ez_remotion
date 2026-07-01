@@ -532,7 +532,21 @@ const ClipSpecificProps: React.FC<{ clip: Clip; updateClip: (id: string, patch: 
         {clip.kind === "video" && (
           <div className="field">
             <label>재생 속도 · {v.playbackRate}x</label>
-            <input type="range" min={0.25} max={3} step={0.05} value={v.playbackRate} onChange={(e) => updateClip(clip.id, { playbackRate: Number(e.target.value) } as Partial<Clip>)} />
+            <input
+              type="range"
+              min={0.25}
+              max={3}
+              step={0.05}
+              value={v.playbackRate}
+              onChange={(e) => {
+                const newRate = Number(e.target.value);
+                // Keep the same source coverage: slower speed → longer timeline clip, so
+                // the whole video still plays instead of its tail getting cut off.
+                const sourceFrames = v.duration * v.playbackRate;
+                const newDuration = Math.max(1, Math.round(sourceFrames / newRate));
+                updateClip(clip.id, { playbackRate: newRate, duration: newDuration } as Partial<Clip>);
+              }}
+            />
           </div>
         )}
         <label className="row">

@@ -134,6 +134,9 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
     const origTrim = clip.kind === "video" || clip.kind === "audio" ? (clip as VideoClip | AudioClip).trimStart : 0;
     const natural =
       clip.kind === "video" || clip.kind === "audio" ? (clip as VideoClip | AudioClip).naturalDurationInFrames : Infinity;
+    // playbackRate stretches the timeline length: `duration` timeline frames consume
+    // `duration * rate` source frames, so the max length is (source left) / rate.
+    const rate = clip.kind === "video" ? (clip as VideoClip).playbackRate : 1;
 
     const onMove = (me: MouseEvent) => {
       let df = Math.round((me.clientX - startX) / ppf);
@@ -142,7 +145,7 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
         for (const id of group) moveClipStart(id, (origStarts.get(id) ?? 0) + df);
       } else if (mode === "right") {
         let newDur = Math.max(1, origDur + df);
-        if (isFinite(natural)) newDur = Math.min(newDur, natural - origTrim);
+        if (isFinite(natural)) newDur = Math.min(newDur, Math.round((natural - origTrim) / rate));
         resizeClip(clip.id, "end", origStart, newDur);
       } else {
         // left edge
