@@ -1,13 +1,19 @@
 import React, { useState } from "react";
 import { useStore } from "../store";
 import { loadVideoMeta, loadImageMeta, loadAudioMeta, guessKind } from "../lib/media";
-import { putAsset, saveProject, loadProject } from "../lib/persist";
+import { putAsset, saveProjectById } from "../lib/persist";
 
 const newAssetId = () => Math.random().toString(36).slice(2, 12);
 
 export const MediaPanel: React.FC = () => {
   const project = useStore((s) => s.project);
-  const replaceProject = useStore((s) => s.replaceProject);
+  const projectId = useStore((s) => s.projectId);
+  const projectName = useStore((s) => s.projectName);
+  const projectList = useStore((s) => s.projectList);
+  const openProject = useStore((s) => s.openProject);
+  const newProject = useStore((s) => s.newProject);
+  const renameCurrentProject = useStore((s) => s.renameCurrentProject);
+  const deleteProject = useStore((s) => s.deleteProject);
   const addVideoClip = useStore((s) => s.addVideoClip);
   const addImageClip = useStore((s) => s.addImageClip);
   const addAudioClip = useStore((s) => s.addAudioClip);
@@ -20,17 +26,28 @@ export const MediaPanel: React.FC = () => {
     window.setTimeout(() => setProjectMsg(""), 2000);
   };
   const onSaveProject = () => {
-    saveProject(project, true);
+    saveProjectById(projectId, projectName, project, true);
     flash("저장됨 ✓");
   };
-  const onLoadProject = async () => {
-    const p = await loadProject();
-    if (p) {
-      replaceProject(p);
-      flash("불러옴 ✓");
-    } else {
-      flash("저장된 프로젝트가 없습니다");
+  const onNewProject = () => {
+    const name = window.prompt("새 프로젝트 이름", `프로젝트 ${projectList.length + 1}`);
+    if (name === null) return;
+    newProject(name);
+    flash("새 프로젝트 ✓");
+  };
+  const onRenameProject = () => {
+    const name = window.prompt("프로젝트 이름 변경", projectName);
+    if (name === null) return;
+    renameCurrentProject(name);
+  };
+  const onDeleteProject = () => {
+    if (projectList.length <= 1) {
+      flash("마지막 프로젝트는 삭제할 수 없습니다");
+      return;
     }
+    if (!window.confirm(`"${projectName}" 프로젝트를 삭제할까요? 되돌릴 수 없습니다.`)) return;
+    deleteProject(projectId);
+    flash("삭제됨 ✓");
   };
   const setProjectMeta = useStore((s) => s.setProjectMeta);
 
@@ -98,14 +115,27 @@ export const MediaPanel: React.FC = () => {
     <div className="col">
       <div className="section">
         <h3>프로젝트</h3>
+        <select value={projectId} onChange={(e) => openProject(e.target.value)} style={{ marginBottom: 6 }}>
+          {projectList.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
         <div className="grid2">
+          <button onClick={onNewProject}>➕ 새 프로젝트</button>
+          <button onClick={onRenameProject}>✏️ 이름변경</button>
+        </div>
+        <div className="grid2" style={{ marginTop: 6 }}>
           <button className="primary" onClick={onSaveProject}>💾 저장</button>
-          <button onClick={onLoadProject}>📂 불러오기</button>
+          <button className="danger" onClick={onDeleteProject} disabled={projectList.length <= 1}>
+            🗑 삭제
+          </button>
         </div>
         {projectMsg ? (
           <p className="hint">{projectMsg}</p>
         ) : (
-          <p className="hint">자동 저장됩니다. 코드 수정/새로고침 전에 💾 저장으로 확실히 보관하세요.</p>
+          <p className="hint">위에서 프로젝트를 전환하거나 ➕로 새로 만드세요. 각 프로젝트는 자동 저장됩니다.</p>
         )}
       </div>
 

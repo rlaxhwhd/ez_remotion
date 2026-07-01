@@ -16,7 +16,17 @@ import type {
 import { defaultTransform } from "./types";
 import { animationRegistry, defaultParamsFor } from "./remotion/animations";
 import { filterEffectRegistry, regionEffectRegistry } from "./remotion/effects";
-import { saveProject } from "./lib/persist";
+import {
+  saveProjectById,
+  loadProjectById,
+  listProjects,
+  createProjectMeta,
+  renameProjectMeta,
+  deleteProjectData,
+  ensureProjectsInitialized,
+  setCurrentProjectId,
+  type ProjectMeta,
+} from "./lib/persist";
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -41,6 +51,10 @@ export type ToolMode = "select" | "region";
 
 type State = {
   project: Project;
+  // Multiple named projects live in localStorage; this is the open one.
+  projectId: string;
+  projectName: string;
+  projectList: ProjectMeta[];
   selectedClipId: string | null; // "primary" selection (drives the Inspector)
   selectedClipIds: string[]; // full multi-selection (Ctrl/⌘-click)
   currentFrame: number;
@@ -60,6 +74,13 @@ type State = {
   setProjectMeta: (meta: Partial<Pick<Project, "width" | "height" | "fps" | "background">>) => void;
   replaceProject: (project: Project) => void;
   undo: () => void;
+
+  // multiple projects (localStorage-backed)
+  initProjects: () => Promise<void>;
+  newProject: (name?: string) => void;
+  openProject: (id: string) => Promise<void>;
+  renameCurrentProject: (name: string) => void;
+  deleteProject: (id: string) => Promise<void>;
 
   // adding clips
   addVideoClip: (data: { src: string; assetId?: string; naturalWidth: number; naturalHeight: number; durationInFrames: number; name: string }) => void;
@@ -143,8 +164,27 @@ export const useStore = create<State>((set, get) => {
   // place a new clip at the playhead on the appropriate track
   const placeStart = () => Math.round(get().currentFrame);
 
+  // Swap in a whole project (startup load / new / switch). Not an undoable edit.
+  const applyProject = (project: Project, id: string, name: string) => {
+    setCurrentProjectId(id);
+    suppressHistory = true;
+    undoPast.length = 0;
+    set({
+      project,
+      projectId: id,
+      projectName: name,
+      projectList: listProjects(),
+      selectedClipId: null,
+      selectedClipIds: [],
+    });
+    suppressHistory = false;
+  };
+
   return {
     project: initialProject(),
+    projectId: "",
+    projectName: "프로젝트 1",
+    projectList: [],
     selectedClipId: null,
     selectedClipIds: [],
     currentFrame: 0,
@@ -182,6 +222,49 @@ export const useStore = create<State>((set, get) => {
       suppressHistory = true;
       set({ project, selectedClipId: null, selectedClipIds: [] });
       suppressHistory = false;
+    },
+
+    initProjects: async () => {
+      const meta = ensureProjectsInitialized();
+      const loaded = await loadProjectById(meta.id);
+      applyProject(loaded ?? initialProject(), meta.id, meta.name);
+    },
+    newProject: (name) => {
+      const st = get();
+      saveProjectById(st.projectId, st.projectName, st.project); // flush the current one
+      const nm = (name ?? "").trim() || `프로젝트 ${st.projectList.length + 1}`;
+      const meta = createProjectMeta(nm);
+      applyProject(initialProject(), meta.id, meta.name);
+    },
+    openProject: async (id) => {
+      const st = get();
+      if (id === st.projectId) return;
+      saveProjectById(st.projectId, st.projectName, st.project); // flush the current one
+      const loaded = await loadProjectById(id);
+      const meta = listProjects().find((p) => p.id === id);
+      applyProject(loaded ?? initialProject(), id, meta?.name ?? "프로젝트");
+    },
+    renameCurrentProject: (name) => {
+      const nm = name.trim();
+      if (!nm) return;
+      const list = renameProjectMeta(get().projectId, nm);
+      set({ projectName: nm, projectList: list });
+    },
+    deleteProject: async (id) => {
+      const list = deleteProjectData(id);
+      if (id !== get().projectId) {
+        set({ projectList: list });
+        return;
+      }
+      // Deleted the open project → switch to another (or a fresh one) WITHOUT
+      // flushing the just-deleted one back to storage.
+      if (list.length === 0) {
+        const meta = createProjectMeta("프로젝트 1");
+        applyProject(initialProject(), meta.id, meta.name);
+      } else {
+        const loaded = await loadProjectById(list[0].id);
+        applyProject(loaded ?? initialProject(), list[0].id, list[0].name);
+      }
     },
 
     addVideoClip: ({ src, assetId, naturalWidth, naturalHeight, durationInFrames, name }) => {
@@ -527,12 +610,15 @@ useStore.subscribe((s, prev) => {
   if (undoPast.length > UNDO_LIMIT) undoPast.shift();
 });
 
-// Persist the project to localStorage whenever it changes (debounced).
+// Persist the open project to its own localStorage slot whenever it changes (debounced).
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 useStore.subscribe((s, prev) => {
   if (s.project === prev.project) return;
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => saveProject(useStore.getState().project), 300);
+  saveTimer = setTimeout(() => {
+    const st = useStore.getState();
+    saveProjectById(st.projectId, st.projectName, st.project);
+  }, 300);
 });
 
 export const selectedClip = (s: State): Clip | null =>

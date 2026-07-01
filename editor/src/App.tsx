@@ -6,7 +6,6 @@ import { Inspector } from "./components/Inspector";
 import { Timeline } from "./components/Timeline";
 import { TimelineWindow } from "./components/TimelineWindow";
 import { useStore } from "./store";
-import { loadProject } from "./lib/persist";
 import { exportProject } from "./lib/exporter";
 
 const fmt = (frame: number, fps: number) => {
@@ -28,7 +27,7 @@ export const App: React.FC = () => {
   const selectedClipIds = useStore((s) => s.selectedClipIds);
   const removeClip = useStore((s) => s.removeClip);
   const setCurrentFrame = useStore((s) => s.setCurrentFrame);
-  const replaceProject = useStore((s) => s.replaceProject);
+  const initProjects = useStore((s) => s.initProjects);
   const undo = useStore((s) => s.undo);
 
   const [exportStatus, setExportStatus] = useState<string | null>(null);
@@ -46,12 +45,10 @@ export const App: React.FC = () => {
     }
   };
 
-  // restore the saved project (and its media) on first load
+  // restore the projects registry + open the last project (and its media) on first load
   useEffect(() => {
-    loadProject().then((p) => {
-      if (p) replaceProject(p);
-    });
-  }, [replaceProject]);
+    initProjects();
+  }, [initProjects]);
 
   const togglePlay = () => {
     const p = playerRef.current;
