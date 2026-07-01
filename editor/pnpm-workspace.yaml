@@ -1,0 +1,4 @@
+# pnpm v11 no longer reads the "pnpm" field in package.json. Dependencies with
+# install/build scripts are blocked by default; allow esbuild (needed by Vite) here.
+allowBuilds:
+  esbuild: true
