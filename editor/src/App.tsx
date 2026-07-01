@@ -160,7 +160,7 @@ export const App: React.FC = () => {
               타임라인이 새 창에 열려 있습니다.
               <button onClick={() => setTimelinePopped(false)}>이 창으로 되돌리기</button>
               <TimelineWindow onClose={closeTimeline}>
-                <Timeline playerRef={playerRef} />
+                <Timeline playerRef={playerRef} fillHeight />
               </TimelineWindow>
             </div>
           ) : (

@@ -47,7 +47,10 @@ const clipColor = (kind: Clip["kind"]): string => {
   }
 };
 
-export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }> = ({ playerRef }) => {
+export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null>; fillHeight?: boolean }> = ({
+  playerRef,
+  fillHeight,
+}) => {
   const project = useStore((s) => s.project);
   const ppf = useStore((s) => s.pixelsPerFrame);
   const setPpf = useStore((s) => s.setPixelsPerFrame);
@@ -207,8 +210,10 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
   const playheadX = LABEL_W + currentFrame * ppf;
 
   return (
-    <div className="timeline" style={{ height: timelineHeight }}>
-      <div className="timeline-resize-handle" onMouseDown={startResize} />
+    <div className="timeline" style={{ height: fillHeight ? "100%" : timelineHeight }}>
+      {/* Popped out into its own window → fill it and let the OS window edge resize;
+          inline → the drag handle sets the height. */}
+      {!fillHeight && <div className="timeline-resize-handle" onMouseDown={startResize} />}
       <div className="timeline-head">
         <strong style={{ fontSize: 12 }}>타임라인</strong>
         <span className="muted">컷편집: ✂ 분할 / Del 삭제 · Ctrl(⌘)+클릭 다중선택 → 드래그로 함께 이동, 🔗 합치기</span>

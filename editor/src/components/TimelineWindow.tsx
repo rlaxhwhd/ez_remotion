@@ -22,8 +22,17 @@ export const TimelineWindow: React.FC<{ onClose: () => void; children: React.Rea
     document.querySelectorAll('style, link[rel="stylesheet"]').forEach((node) => {
       win.document.head.appendChild(node.cloneNode(true));
     });
-    Object.assign(win.document.body.style, { margin: "0", background: "#16181f", color: "#e7e9ee" });
+    // Fill the popup vertically so the timeline grows when the window is resized.
+    win.document.documentElement.style.height = "100%";
+    Object.assign(win.document.body.style, {
+      margin: "0",
+      height: "100%",
+      overflow: "hidden",
+      background: "#16181f",
+      color: "#e7e9ee",
+    });
     const mount = win.document.createElement("div");
+    mount.style.height = "100%";
     win.document.body.appendChild(mount);
     setContainer(mount);
 
