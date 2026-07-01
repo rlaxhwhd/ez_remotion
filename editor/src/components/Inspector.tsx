@@ -410,6 +410,7 @@ const NumField: React.FC<{ label: string; value: number; step?: number; onChange
 );
 
 const ClipSpecificProps: React.FC<{ clip: Clip; updateClip: (id: string, patch: Partial<Clip>) => void }> = ({ clip, updateClip }) => {
+  const setClipSpeed = useStore((s) => s.setClipSpeed);
   if (clip.kind === "text") {
     return (
       <div className="section">
@@ -543,14 +544,7 @@ const ClipSpecificProps: React.FC<{ clip: Clip; updateClip: (id: string, patch: 
               max={3}
               step={0.05}
               value={v.playbackRate}
-              onChange={(e) => {
-                const newRate = Number(e.target.value);
-                // Keep the same source coverage: slower speed → longer timeline clip, so
-                // the whole video still plays instead of its tail getting cut off.
-                const sourceFrames = v.duration * v.playbackRate;
-                const newDuration = Math.max(1, Math.round(sourceFrames / newRate));
-                updateClip(clip.id, { playbackRate: newRate, duration: newDuration } as Partial<Clip>);
-              }}
+              onChange={(e) => setClipSpeed(clip.id, Number(e.target.value))}
             />
           </div>
         )}

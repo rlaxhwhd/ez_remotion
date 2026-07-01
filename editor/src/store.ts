@@ -99,6 +99,10 @@ type State = {
   mergeClips: (ids: string[]) => void;
   moveClipStart: (id: string, start: number) => void;
   resizeClip: (id: string, edge: "start" | "end", newStart: number, newDuration: number, newTrimStart?: number) => void;
+  // Change a video clip's playback speed: keeps the same source coverage (the whole
+  // video still plays) AND scales its attached effect/animation bars proportionally
+  // so they keep their relative place/length inside the now longer/shorter clip.
+  setClipSpeed: (id: string, rate: number) => void;
 
   // animations
   addAnimation: (clipId: string, type: string, paramOverrides?: Record<string, ParamValue>) => void;
@@ -378,6 +382,33 @@ export const useStore = create<State>((set, get) => {
     },
 
     updateClip: (id, patch) => mutateClip(id, (c) => Object.assign(c, patch)),
+
+    setClipSpeed: (id, rate) =>
+      mutateClip(id, (c) => {
+        if (c.kind !== "video") return;
+        const v = c as VideoClip;
+        const oldDur = v.duration;
+        // preserve source coverage: duration * rate stays constant → whole video plays
+        const newDur = Math.max(1, Math.round((oldDur * v.playbackRate) / rate));
+        const factor = newDur / oldDur;
+        v.playbackRate = rate;
+        v.duration = newDur;
+        const end = c.start + newDur;
+        // Scale independently-timed overlay bars so they keep their relative spot/length.
+        // (Overlays without an explicit start/duration follow clip.duration automatically.)
+        const scale = (o: { start?: number; duration?: number }) => {
+          if (o.start !== undefined) {
+            o.start = Math.round(c.start + (o.start - c.start) * factor);
+            o.start = Math.max(c.start, Math.min(o.start, end - 1));
+          }
+          if (o.duration !== undefined) {
+            o.duration = Math.max(1, Math.round(o.duration * factor));
+            o.duration = Math.min(o.duration, end - (o.start ?? c.start));
+          }
+        };
+        v.animations.forEach(scale);
+        v.effects.forEach(scale);
+      }),
 
     removeClip: (id) =>
       set((s) => {
