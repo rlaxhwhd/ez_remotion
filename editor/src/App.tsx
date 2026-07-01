@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { PlayerRef } from "@remotion/player";
 import { MediaPanel } from "./components/MediaPanel";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { Inspector } from "./components/Inspector";
 import { Timeline } from "./components/Timeline";
+import { TimelineWindow } from "./components/TimelineWindow";
 import { useStore } from "./store";
 import { loadProject } from "./lib/persist";
 import { exportProject } from "./lib/exporter";
@@ -32,6 +33,10 @@ export const App: React.FC = () => {
 
   const [exportStatus, setExportStatus] = useState<string | null>(null);
   const exporting = exportStatus !== null && !exportStatus.startsWith("완료") && !exportStatus.startsWith("오류");
+
+  // Pop the timeline out into its own browser window (handy for long videos).
+  const [timelinePopped, setTimelinePopped] = useState(false);
+  const closeTimeline = useCallback(() => setTimelinePopped(false), []);
 
   const onExport = async () => {
     try {
@@ -143,8 +148,24 @@ export const App: React.FC = () => {
             <span className="time">
               {fmt(currentFrame, project.fps)} / {fmt(project.durationInFrames, project.fps)}
             </span>
+            <button
+              onClick={() => setTimelinePopped((v) => !v)}
+              title="타임라인을 별도 브라우저 창으로 분리합니다 (긴 영상 편집에 편리). 다시 누르거나 창을 닫으면 복귀합니다."
+            >
+              {timelinePopped ? "🡸 타임라인 복귀" : "🡵 타임라인 새 창"}
+            </button>
           </div>
-          <Timeline playerRef={playerRef} />
+          {timelinePopped ? (
+            <div className="timeline-detached">
+              타임라인이 새 창에 열려 있습니다.
+              <button onClick={() => setTimelinePopped(false)}>이 창으로 되돌리기</button>
+              <TimelineWindow onClose={closeTimeline}>
+                <Timeline playerRef={playerRef} />
+              </TimelineWindow>
+            </div>
+          ) : (
+            <Timeline playerRef={playerRef} />
+          )}
         </div>
         <Inspector />
       </div>

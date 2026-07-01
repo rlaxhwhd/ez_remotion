@@ -226,6 +226,18 @@ input[type="range"] {
   background: var(--panel);
   flex-shrink: 0;
 }
+.timeline-detached {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 22px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 13px;
+  flex-shrink: 0;
+}
 .timeline-resize-handle {
   height: 5px;
   cursor: row-resize;

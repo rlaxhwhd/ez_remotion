@@ -69,16 +69,17 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
     e.preventDefault();
     const startY = e.clientY;
     const startH = timelineHeight;
+    const w = e.currentTarget.ownerDocument.defaultView ?? window;
     const onMove = (me: MouseEvent) => {
       const delta = startY - me.clientY;
       setTimelineHeight(Math.max(100, Math.min(600, startH + delta)));
     };
     const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+      w.removeEventListener("mousemove", onMove);
+      w.removeEventListener("mouseup", onUp);
     };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    w.addEventListener("mousemove", onMove);
+    w.addEventListener("mouseup", onUp);
   };
 
   const totalFrames = Math.max(project.durationInFrames + project.fps * 2, project.fps * 5);
@@ -137,6 +138,9 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
     // playbackRate stretches the timeline length: `duration` timeline frames consume
     // `duration * rate` source frames, so the max length is (source left) / rate.
     const rate = clip.kind === "video" ? (clip as VideoClip).playbackRate : 1;
+    // Attach drag listeners to the window the event fired in (the popup window when
+    // the timeline is popped out) so dragging still works there.
+    const w = e.currentTarget.ownerDocument.defaultView ?? window;
 
     const onMove = (me: MouseEvent) => {
       let df = Math.round((me.clientX - startX) / ppf);
@@ -159,11 +163,11 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
       }
     };
     const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+      w.removeEventListener("mousemove", onMove);
+      w.removeEventListener("mouseup", onUp);
     };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    w.addEventListener("mousemove", onMove);
+    w.addEventListener("mouseup", onUp);
   };
 
   // drag move / resize an animation or effect bar — independent of its clip
@@ -174,6 +178,7 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
     const startX = e.clientX;
     const origStart = badge.start;
     const origDur = badge.duration;
+    const w = e.currentTarget.ownerDocument.defaultView ?? window;
     const onMove = (me: MouseEvent) => {
       const df = Math.round((me.clientX - startX) / ppf);
       if (mode === "move") setOverlayTiming(clip.id, badge.cls, badge.id, origStart + df, origDur);
@@ -181,11 +186,11 @@ export const Timeline: React.FC<{ playerRef: React.RefObject<PlayerRef | null> }
       else setOverlayTiming(clip.id, badge.cls, badge.id, origStart + df, origDur - df);
     };
     const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+      w.removeEventListener("mousemove", onMove);
+      w.removeEventListener("mouseup", onUp);
     };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    w.addEventListener("mousemove", onMove);
+    w.addEventListener("mouseup", onUp);
   };
 
   // ruler ticks every second
