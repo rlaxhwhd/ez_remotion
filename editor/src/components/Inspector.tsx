@@ -23,6 +23,8 @@ const transitionKinds: { value: TransitionKind; label: string }[] = [
 // Fonts loaded via the Google Fonts <link> in index.html.
 const fontOptions: { value: string; label: string }[] = [
   { value: "system-ui, sans-serif", label: "시스템 기본" },
+  { value: "'BMJUA', sans-serif", label: "배민 주아 (BMJUA)" },
+  { value: "'Jalnan2', sans-serif", label: "잘난체 (Jalnan2)" },
   { value: "'Noto Sans KR', sans-serif", label: "본고딕 (Noto Sans KR)" },
   { value: "'Black Han Sans', sans-serif", label: "검은고딕" },
   { value: "'Jua', sans-serif", label: "주아" },

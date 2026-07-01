@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Composition, continueRender, delayRender } from "remotion";
+import { Composition, continueRender, delayRender, staticFile } from "remotion";
 import type { Project } from "../types";
 import { VideoComposition } from "./VideoComposition";
 
@@ -29,12 +29,28 @@ const RenderComposition: React.FC<{ project: Project }> = ({ project }) => {
       done = true;
       continueRender(handle);
     };
+    // Google Fonts (CDN).
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href = FONT_HREF;
-    link.onload = () => document.fonts.ready.then(finish);
-    link.onerror = finish;
     document.head.appendChild(link);
+    // Local fonts bundled in public/fonts — mirrors index.html for the preview.
+    const style = document.createElement("style");
+    style.textContent =
+      `@font-face{font-family:'BMJUA';src:url(${staticFile("fonts/BMJUA.ttf")}) format('truetype');font-display:swap;}` +
+      `@font-face{font-family:'Jalnan2';src:url(${staticFile("fonts/Jalnan2.ttf")}) format('truetype');font-display:swap;}`;
+    document.head.appendChild(style);
+    // Wait for the CDN sheet + force-load the local faces, then all fonts ready.
+    Promise.all([
+      new Promise<void>((r) => {
+        link.onload = () => r();
+        link.onerror = () => r();
+      }),
+      document.fonts.load("16px BMJUA").catch(() => {}),
+      document.fonts.load("16px Jalnan2").catch(() => {}),
+    ])
+      .then(() => document.fonts.ready)
+      .then(finish);
     const t = setTimeout(finish, 8000); // fallback so a font CDN hiccup can't hang the render
     return () => clearTimeout(t);
   }, [handle]);
