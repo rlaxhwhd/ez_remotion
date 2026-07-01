@@ -229,19 +229,24 @@ export const ClipRenderer: React.FC<{ clip: Clip }> = ({ clip }) => {
     .filter(Boolean);
 
   return (
-    <AbsoluteFill
-      style={{
-        opacity: Math.max(0, Math.min(1, opacity)),
-        transform,
-        transformOrigin: "center center",
-        filter: anim.blur ? `blur(${anim.blur}px)` : undefined,
-        clipPath: trans.clipPath,
-      }}
-    >
-      <InnerContent clip={clip} />
-      {glowLayer}
+    // Outer fill is composition/screen space. Region overlays (highlight box, blur,
+    // spotlight…) live here so they stay pinned to the frame area the user drew,
+    // rather than inheriting the clip's move/scale/zoom transform and drifting off.
+    <AbsoluteFill>
+      <AbsoluteFill
+        style={{
+          opacity: Math.max(0, Math.min(1, opacity)),
+          transform,
+          transformOrigin: "center center",
+          filter: anim.blur ? `blur(${anim.blur}px)` : undefined,
+          clipPath: trans.clipPath,
+        }}
+      >
+        <InnerContent clip={clip} />
+        {glowLayer}
+        {regionAnimLayers}
+      </AbsoluteFill>
       {regionLayers}
-      {regionAnimLayers}
     </AbsoluteFill>
   );
 };
